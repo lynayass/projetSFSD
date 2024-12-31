@@ -5,1231 +5,550 @@
 #include <stdbool.h>
 
 #define MAX_BLOCS 15
-#define FACTEUR_BLOCS MAX_BLOCS  // Facteur de blocage √©gal au nombre de blocs
+#define FACTEUR_BLOCS 15  // Facteur de blocage Ègal au nombre d'enregistrements par bloc
 
 // Structure d'un enregistrement
 typedef struct ENREG {
-    int id;            // Indique si le bloc est occup√© (1) ou libre (0)
-    char nom[50];      // Contient le num√©ro du bloc
+    int id;            // Indique si le bloc est occupÈ (1) ou libre (0)
+    char nom[50];      // Contient le numÈro du bloc (nom du bloc)
 } ENREG;
 
-// Structure des m√©tadonn√©es d'un fichier
+// Structure des mÈtadonnÈes d'un fichier
 typedef struct METADATA {
     char fichier_nom[50];     // Nom du fichier
-    int taille_blocs;         // Nombre de blocs utilis√©s dans le fichier
+    int taille_blocs;         // Nombre de blocs utilisÈs dans le fichier
     int taille_enregs;        // Nombre d'enregistrements
     int adresse_premier;      // Adresse du premier bloc
-    char org_globale[30];     // Organisation globale ('contigu', 'cha√Æn√©')
+    char org_globale[30];     // Organisation globale ('contigu', 'chaÓnÈ')
     char org_interne[30];     // Organisation interne ('ORDONNE', 'NONORDONNE')
 } METADATA;
 
 // Structure d'un bloc
 typedef struct BLOC {
     ENREG enregs[FACTEUR_BLOCS]; // Enregistrements dans le bloc
-    int enregs_utilises;         // Nombre d'enregistrements utilis√©s
-    METADATA metadata;           // M√©tadonn√©es du fichier
-    int suivant;                 // Adresse logique du bloc suivant (pour cha√Æn√©)
+    int enregs_utilises;         // Nombre d'enregistrements utilisÈs
+    METADATA metadata;           // MÈtadonnÈes du fichier
+    int suivant;                 // Adresse logique du bloc suivant (pour chaÓnÈ)
 } BLOC;
 
-typedef struct POSITION {
+typedef struct POSITION POSITION;
+struct POSITION {
     int bloc;
-    int deplacement;  // Assurez-vous que ce membre est d√©fini correctement
-} POSITION;
-void initialiserMemoireSecondaire(FILE* ms);
-void afficherEtatTableAllocation(FILE* ms);
-void afficherEtatMemoireSecondaire(FILE *ms);
-void miseAJourTableAllocation(FILE *ms, int bloc, int etat);
-void marquerBlocCommeOccupe(FILE* ms, int indiceBloc);
-void marquerBlocCommeLibre(FILE *ms, int indiceBloc);
-int verifierEspaceContigu(int blocsNecessaires, FILE *ms);
-int verifierEspaceChainee(int blocsNecessaires, FILE *ms);
-int fichierExiste(FILE *ms, const char *nom_fichier);
-void creationEtChargementFichier(FILE *ms);
-void chargerContiguOrdonne(FILE *ms, METADATA *metadata);
-void chargerContiguNonOrdonne(FILE *ms, METADATA *metadata);
-void chargerChaineOrdonne(FILE *ms, METADATA *metadata);
-void chargerChaineNonOrdonne(FILE *ms, METADATA *metadata);
-void mettreAJourMetadonnees(FILE *ms, const METADATA *metadata, int blocIndex);
-void lireTableAllocation(FILE *ms, BLOC *buffer);
+    int deplacement;
+};
 
-void lireTableAllocation(FILE *ms, BLOC *buffer);
-void insertionContigueOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
-void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
-void insertionChaineeOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
-void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
-int verifierIDUnique(FILE *ms, const char *nom_fichier, int id);
-void gererInsertion(FILE *ms, METADATA* meta, const char *nom_fichier);
-POSITION rechercherContigueOrdonnee(FILE *ms, const char *nom_fichier, int id);
-POSITION rechercherContigueNonOrdonnee(FILE *ms, const char *nom_fichier, int id);
-POSITION rechercherChaineeOrdonnee(FILE *ms, const char *nom_fichier, int id);
-POSITION rechercherChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, int id);
-POSITION gererRecherche(FILE *ms, METADATA* meta, const char *nom_fichier, int id);
-
-
-void suppressionContigueOrdonneeLogique(FILE *ms, const char *nom_fichier, int id);
-void suppressionContigueOrdonneePhysique(FILE *ms, const char *nom_fichier, int id);
-void suppressionContigueNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id);
-void suppressionContigueNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id);
-void suppressionChaineeOrdonneeLogique(FILE *ms, const char *nom_fichier, int id);
-void suppressionChaineeOrdonneePhysique(FILE *ms, const char *nom_fichier, int id);
-void suppressionChaineeNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id);
-void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id);
-
-void defragmentationChaineeOrdonnee(FILE *ms, const char *nom_fichier);
-void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier);
-void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) ;
-
-void defragmentationContigueOrdonnee(FILE *ms, const char *nom_fichier);
-void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression, const char *org_globale, const char *org_interne);
-void compactageMemoire(FILE *ms);
-
-void gererDefragmentation(FILE *ms, const char *nom_fichier, const char *org_globale, const char *org_interne);
-
-void afficherMemoire(FILE *ms, METADATA *meta, const char *nom_fichier);
-void supprimerFichier(FILE *ms, const char *nom_du_fichier);
-
-void defragmenterMemoire(FILE *ms, METADATA *meta);
-
-void lireFichier(FILE *ms, METADATA *meta, const char *nom_fichier, int id);
-void affichageBlocs(FILE *ms) ;
- int nombredeblocsLibres(FILE *f);
-void afficherMetadonnees(FILE *ms);
-void viderMemoireSecondaire(FILE *ms);
-void initialiserMemoire(FILE *ms, METADATA *meta);
-
-void renommerFichier(FILE *ms, const char *ancien_nom, const char *nouveau_nom) ;
-void afficherBienvenue();
-void afficherMenu();
-
-
-
-int main() {
-    FILE *ms;
-    ms = fopen("memoire_secondaire.bin", "wb+");
-    if (!ms) {
-        perror("√âchec de l'ouverture du fichier de m√©moire secondaire");
-        return EXIT_FAILURE;
-    }
-    METADATA meta;
-    // initialiserMemoire(ms, &meta);
-
-    // Afficher le message de bienvenue
-    afficherBienvenue();
-
-    int choix;
-    char nom_fichier[50];
-    ENREG nouvel_enreg;
-    int id;
-    int type_suppression;
-
-    do {
-        // Afficher le menu
-        afficherMenu();
-
-        printf("Choisissez une option: ");
-        scanf("%d", &choix);
-
-        switch (choix) {
-            case 1:
-                creationEtChargementFichier(ms);
-                break;
-            case 2:
-              afficherMetadonnees(ms);
-                break;
-            case 3:
-                printf("Entrez le nom du fichier: ");
-                scanf("%s", nom_fichier);
-                printf("Entrez l'ID de l'enregistrement: ");
-                scanf("%d", &id);
-                gererRecherche(ms, &meta, nom_fichier, id);
-                break;
-            case 4:
-                printf("Entrez le nom du fichier: ");
-                scanf("%s", nom_fichier);
-                printf("Entrez l'ID du nouvel enregistrement: ");
-                scanf("%d", &nouvel_enreg.id);
-                printf("Entrez le nom du nouvel enregistrement: ");
-                scanf("%s", nouvel_enreg.nom);
-                gererInsertion(ms, &meta, nom_fichier);
-                break;
-            case 5:
-                printf("Entrez le nom du fichier: ");
-                scanf("%s", nom_fichier);
-                printf("Entrez l'ID de l'enregistrement √† supprimer: ");
-                scanf("%d", &id);
-                printf("Type de suppression (1 pour logique, 2 pour physique): ");
-                scanf("%d", &type_suppression);
-                gererSuppression(ms, nom_fichier, id, type_suppression, meta.org_globale, meta.org_interne);
-                break;
-            case 6:
-                printf("Entrez le nom du fichier: ");
-                scanf("%s", nom_fichier);
-                printf("Entrez l'organisation globale : ");
-                char org_globale[30];
-                scanf("%s", org_globale);
-                printf("Entrez l'organisation interne : ");
-                char org_interne[30];
-                scanf("%s", org_interne);
-                gererDefragmentation(ms, nom_fichier, org_globale, org_interne);
-                break;
-            case 7:
-                printf("Entrez le nom du fichier: ");
-                scanf("%s", nom_fichier);
-                supprimerFichier(ms, nom_fichier);
-                break;
-            case 8:
-                printf("Entrez le nom du fichier √† renommer: ");
-                scanf("%s", nom_fichier);
-                printf("Entrez le nouveau nom: ");
-                char nouveau_nom[50];
-                scanf("%s", nouveau_nom);
-                renommerFichier(ms, nom_fichier, nouveau_nom);
-                break;
-            case 9:
-                compactageMemoire(ms);
-                break;
-            case 10:
-                viderMemoireSecondaire(ms);
-                break;
-            case 11:
-                printf("+------------------------------------------------------------+\n");
-                printf("|          Merci d'avoir utilis√© le SGF. Au revoir !         |\n");
-                printf("+------------------------------------------------------------+\n");
-                break;
-            default:
-                printf("Option non valide. Veuillez r√©essayer.\n");
-        }
-    } while (choix != 11);
-
-    fclose(ms);
-    return 0;
-}
-
-
-
-
-
-void initialiserMemoireSecondaire(FILE* ms) {
-    if (ms == NULL) {
-        printf("Erreur : Impossible d'ouvrir 'memoire_secondaire.dat'.\n");
-        return;
-    }
-    
-    printf("Initialisation de la m√©moire secondaire...\n");
-
-    BLOC buffer;
-    memset(&buffer, 0, sizeof(BLOC));  // Initialiser le buffer √† z√©ro
-
-    // Initialiser la table d'allocation dans le bloc 0
-    buffer.enregs[0].id = 1; // Marquer le premier bloc comme occup√© (table d'allocation)
-    sprintf(buffer.enregs[0].nom, "Bloc_%d", 0);
-
-    for (int i = 1; i < FACTEUR_BLOCS; i++) {
-        buffer.enregs[i].id = 0; // Marquer les blocs comme libres
-        memset(buffer.enregs[i].nom, ' ', sizeof(buffer.enregs[i].nom) - 1); // Initialiser √† des espaces
-        buffer.enregs[i].nom[sizeof(buffer.enregs[i].nom) - 1] = '\0'; // Terminer la cha√Æne avec un NULL
-    }
-
-    // Initialiser les m√©tadonn√©es
-    strcpy(buffer.metadata.fichier_nom, "table_allocation");
-    buffer.metadata.taille_blocs = 1;  // Indiquer que ce bloc contient la table d'allocation
-    buffer.metadata.taille_enregs = 0;
-    buffer.metadata.adresse_premier = 0;
-    strcpy(buffer.metadata.org_globale, "N/A");
-    strcpy(buffer.metadata.org_interne, "N/A");
-
-    buffer.enregs_utilises = FACTEUR_BLOCS;
-    buffer.suivant = -1;  // Pas de bloc suivant
-
-    // √âcrire le buffer dans le fichier
-    rewind(ms);  // S'assurer de commencer √† √©crire au d√©but
-    if (fwrite(&buffer, sizeof(buffer), 1, ms) != 1) {
-        printf("Erreur : Impossible d'√©crire dans 'memoire_secondaire.dat'.\n");
-    } else {
-        printf("M√©moire secondaire initialis√©e avec succ√®s.\n");
-    }
-}
-
-
-// Fonction pour afficher l'√©tat de la table d'allocation
-void afficherEtatTableAllocation(FILE* ms) {
-    BLOC buffer;
-    lireTableAllocation(ms, &buffer);
-
-    printf("Table d'allocation des blocs :\n");
-    for (int i = 0; i < FACTEUR_BLOCS; i++) {
-        printf("Bloc %d : %s (Etat : %s)\n", i, buffer.enregs[i].nom, 
-               (buffer.enregs[i].id == 0) ? "Libre" : "Occup√©");
-    }
-}
-void afficherMenu() {
-    printf("\n+------------------------------------------------------------+\n");
-    printf("|                           MENU                              |\n");
-   printf("\n+------------------------------------------------------------+\n");
-  
-    printf("|   1. Cr√©er et charger un fichier                            |\n");
-    printf("|   2. Afficher les m√©tadonn√©es des fichiers                  |\n");
-    printf("|   3. Rechercher un enregistrement par ID                    |\n");
-    printf("|   4. Ins√©rer un nouvel enregistrement                       |\n");
-    printf("|   5. Supprimer un enregistrement                            |\n");
-    printf("|   6. D√©fragmenter un fichier                                |\n");
-    printf("|   7. Supprimer un fichier                                   |\n");
-    printf("|   8. Renommer un fichier                                    |\n");
-    printf("|   9. Compactage de la m√©moire secondaire                    |\n");
-    printf("|   10. Vider la m√©moire secondaire                           |\n");
-    printf("|   11. Quitter                                               |\n");
-    printf("+------------------------------------------------------------+\n");
-}
-void afficherBienvenue() {
-    printf("+------------------------------------------------------------+\n");
-    printf("|                                                            |\n");
-    printf("|        BIENVENUE DANS LE Simulateur Simplifi√© d‚Äôun         |\n");
-    printf("|            Syst√®me de Gestion de Fichiers (SGF)            |\n");
-    printf("|                                                            |\n");
-    printf("+------------------------------------------------------------+\n");
-}
-
-
-// Fonction pour afficher l'√©tat de la m√©moire secondaire
-void afficherEtatMemoireSecondaire(FILE *ms) {
-    if (ms == NULL) {
-        printf("Erreur : Le fichier de m√©moire secondaire est invalide.\n");
-        return;
-    }
-
-    printf("Affichage de l'√©tat de la m√©moire secondaire :\n");
-
-    BLOC buffer;
-    fseek(ms, 0, SEEK_SET);  // S'assurer de commencer √† lire au d√©but
-    for (int i = 0; i < MAX_BLOCS; i++) {
-        if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
-            printf("Erreur : Impossible de lire le bloc %d.\n", i);
-            continue;
-        }
-
-        if (buffer.enregs_utilises == 0) {
-            printf("Bloc %d: Libre\n", i);
-        } else {
-            printf("Bloc %d: Occup√© par '%s', %d enregistrements\n", i, buffer.metadata.fichier_nom, buffer.enregs_utilises);
-        }
-    }
-
-    int nbBlocsLibres = nombredeblocsLibres(ms);
-    printf("Nombre de blocs libres : %d\n", nbBlocsLibres);
-}
-
-
-void miseAJourTableAllocation(FILE *ms, int bloc, int etat) {
-    if (ms == NULL) {
-        printf("Erreur : Le fichier de stockage est invalide.\n");
-        return;
-    }
-
-    BLOC table_allocation;
-
-    // Lire la table d'allocation depuis le premier bloc
+// Fonction pour lire la table d'allocation depuis le premier bloc
+void lireTableAllocation(FILE *ms, BLOC *buffer) {
     rewind(ms);
-    if (fread(&table_allocation, sizeof(BLOC), 1, ms) != 1) {
-        printf("Erreur : Lecture de la table d'allocation a √©chou√©.\n");
-        return;
-    }
-
-    // Mettre √† jour l'√©tat du bloc sp√©cifi√©
-    table_allocation.enregs[bloc].id = etat;
-
-    // R√©√©crire la table d'allocation mise √† jour dans le fichier
-    rewind(ms);
-    if (fwrite(&table_allocation, sizeof(BLOC), 1, ms) != 1) {
-        printf("Erreur : √âcriture de la table d'allocation mise √† jour a √©chou√©.\n");
-        return;
-    }
-
-    printf("Mise √† jour de l'√©tat du bloc %d √† %d r√©ussie.\n", bloc, etat);
+    fread(buffer, sizeof(BLOC), 1, ms);
 }
 
-
-// Fonction pour marquer un bloc comme occup√©
-void marquerBlocCommeOccupe(FILE* ms, int indiceBloc) {
-    BLOC buffer;
-    lireTableAllocation(ms, &buffer);  // Lire la table d'allocation
-
-    if (indiceBloc >= 0 && indiceBloc < FACTEUR_BLOCS) {
-        buffer.enregs[indiceBloc].id = 1;  // Marquer le bloc comme occup√©
-        printf("Le bloc %d est maintenant occup√©.\n", indiceBloc);
-
-        fseek(ms, 0, SEEK_SET);  // Revenir au d√©but du fichier
-        fwrite(&buffer, sizeof(BLOC), 1, ms);  // Sauvegarder les modifications
-    } else {
-        printf("Erreur : Indice de bloc invalide.\n");
-    }
-}
-
-// Fonction pour marquer un bloc comme libre
-void marquerBlocCommeLibre(FILE* ms, int indiceBloc) {
-    BLOC buffer;
-    lireTableAllocation(ms, &buffer);  // Lire la table d'allocation
-
-    if (indiceBloc >= 0 && indiceBloc < FACTEUR_BLOCS) {
-        buffer.enregs[indiceBloc].id = 0;  // Marquer le bloc comme libre
-        printf("Le bloc %d est maintenant libre.\n", indiceBloc);
-
-        fseek(ms, 0, SEEK_SET);  // Revenir au d√©but du fichier
-        fwrite(&buffer, sizeof(BLOC), 1, ms);  // Sauvegarder les modifications
-    } else {
-        printf("Erreur : Indice de bloc invalide.\n");
-    }
-}
-// Fonction pour v√©rifier l'espace disponible pour l'organisation contigu√´
-int verifierEspaceContigu(int blocsNecessaires, FILE *ms) {
-    BLOC buffer;
-    lireTableAllocation(ms, &buffer);
-    for (int i = 1; i <= MAX_BLOCS - blocsNecessaires; i++) {
-        int contigusLibres = 1;
-        for (int j = 0; j < blocsNecessaires; j++) {
-            if (buffer.enregs[i + j].id == 1) { // Si le bloc est occup√©
-                contigusLibres = 0;
-                break;
-            }
-        }
-        if (contigusLibres) {
-            return 1;  // Espace contigu disponible
-        }
-    }
-    return 0;  // Pas d'espace contigu disponible
-}
-
-
-// Fonction pour v√©rifier s'il y a suffisamment d'espace pour l'organisation cha√Æn√©e
-int verifierEspaceChainee(int blocsNecessaires, FILE *ms) {
-    BLOC buffer;
-    lireTableAllocation(ms, &buffer);
-    int blocsLibres = 0;
-
-    // Parcourir la table d'allocation pour compter le nombre de blocs libres
-    for (int i = 1; i < MAX_BLOCS; i++) {
-        if (buffer.enregs[i].id == 0) { // Si le bloc est libre
-            blocsLibres++;
-        }
-    }
-
-    // V√©rifier si le nombre de blocs libres est suffisant
-    return blocsLibres >= blocsNecessaires ? 1 : 0;  // 1 si suffisamment d'espace est disponible, sinon 0
-}
-
-
-// Fonction pour v√©rifier si un fichier existe d√©j√†
-int fichierExiste(FILE *ms, const char *nom_fichier) {
-    if (ms == NULL) {
-        return 0; // Le fichier de stockage est invalide
-    }
-
-    BLOC buffer;
-    fseek(ms, sizeof(BLOC), SEEK_SET); // Positionner apr√®s la table d'allocation
-
-    // Parcourir tous les blocs pour v√©rifier les m√©tadonn√©es
-    while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
-        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) {
-            if (buffer.metadata.taille_enregs > 0) {
-                return 1; // Le fichier existe et n'est pas vide
-            } else {
-                return 2; // Le fichier existe mais est vide
-            }
-        }
-    }
-
-    return 0; // Le fichier n'existe pas
-}
-
-void creationEtChargementFichier(FILE *ms) {
-    if (ms == NULL) {
-        printf("Erreur : Le fichier de stockage est invalide.\n");
-        return;
-    }
-
-    METADATA metadata;
-    int nombre_enregistrements, nombre_blocs;
-
-    // Demander le nom du fichier
-    printf("Entrez le nom du fichier : ");
-    scanf("%s", metadata.fichier_nom);
-
-    // V√©rifier si le fichier existe d√©j√†
-    int etat_fichier = fichierExiste(ms, metadata.fichier_nom);
-    if (etat_fichier == 1) {
-        printf("Erreur : Le fichier '%s' existe d√©j√† et n'est pas vide.\n", metadata.fichier_nom);
-        return;
-    } else if (etat_fichier == 2) {
-        printf("Erreur : Le fichier '%s' existe d√©j√† et est vide.\n", metadata.fichier_nom);
-    }
-
-    // Demander le nombre d'enregistrements
-    printf("Entrez le nombre d'enregistrements : ");
-    scanf("%d", &nombre_enregistrements);
-
-    // Calculer le nombre de blocs n√©cessaires
-    nombre_blocs = (nombre_enregistrements + FACTEUR_BLOCS - 1) / FACTEUR_BLOCS;
-    metadata.taille_blocs = nombre_blocs;
-    metadata.taille_enregs = nombre_enregistrements;
-
-    // Demander le mode d'organisation globale
-    printf("Choisissez l'organisation globale :\n");
-    printf("1. Contigu\n");
-    printf("2. Cha√Æn√©\n");
-    int choixGlobale;
-    scanf("%d", &choixGlobale);
-
-    // Demander le mode d'organisation interne
-    printf("Choisissez l'organisation interne :\n");
-    printf("1. ORDONNE\n");
-    printf("2. NONORDONNE\n");
-    int choixInterne;
-    scanf("%d", &choixInterne);
-
-    strcpy(metadata.org_interne, (choixInterne == 1) ? "ORDONNE" : "NONORDONNE");
-
-    // Traiter les diff√©rents cas d'organisation
-    int espaceSuffisant = 0;
-    if (choixGlobale == 1) {
-        strcpy(metadata.org_globale, "contigu");
-        espaceSuffisant = verifierEspaceContigu(nombre_blocs, ms);
-    } else if (choixGlobale == 2) {
-        strcpy(metadata.org_globale, "cha√Æn√©");
-        espaceSuffisant = verifierEspaceChainee(nombre_blocs, ms);
-    } else {
-        printf("Erreur : Organisation globale invalide.\n");
-        return;
-    }
-
-    if (!espaceSuffisant) {
-        int choix;
-        printf("Pas assez d'espace pour cr√©er le fichier. Choisissez une option :\n");
-        printf("1. Compactage de la m√©moire\n");
-        printf("2. Annuler la cr√©ation du fichier\n");
-        scanf("%d", &choix);
-
-        if (choix == 1) {
-            compactageMemoire(ms);
-            espaceSuffisant = (choixGlobale == 1) ? verifierEspaceContigu(nombre_blocs, ms) : verifierEspaceChainee(nombre_blocs, ms);
-            if (!espaceSuffisant) {
-                printf("Erreur : Pas assez d'espace m√™me apr√®s le compactage.\n");
-                return;
-            }
-        } else {
-            printf("Cr√©ation du fichier annul√©e.\n");
-            return;
-        }
-    }
-
-    if (choixGlobale == 1) {
-        if (choixInterne == 1) {
-            chargerContiguOrdonne(ms, &metadata);
-        } else {
-            chargerContiguNonOrdonne(ms, &metadata);
-        }
-    } else if (choixGlobale == 2) {
-        if (choixInterne == 1) {
-            chargerChaineOrdonne(ms, &metadata);
-        } else {
-            chargerChaineNonOrdonne(ms, &metadata);
-        }
-    }
-
-    printf("Fichier '%s' cr√©√© avec succ√®s.\n", metadata.fichier_nom);
-}
-
-void chargerContiguOrdonne(FILE *ms, METADATA *metadata) { // Impl√©mentation de la fonction
- }
-  void chargerContiguNonOrdonne(FILE *ms, METADATA *metadata) { // Impl√©mentation de la fonction
-  } 
-  void chargerChaineOrdonne(FILE *ms, METADATA *metadata) { // Impl√©mentation de la fonction
-   } 
-   void chargerChaineNonOrdonne(FILE *ms, METADATA *metadata) {}
-// Fonction pour mettre √† jour les m√©tadonn√©es dans le bloc de m√©moire secondaire
-
+// Fonction pour mettre ‡ jour les mÈtadonnÈes dans le bloc de mÈmoire secondaire
 void mettreAJourMetadonnees(FILE *ms, const METADATA *metadata, int blocIndex) {
     if (ms == NULL) {
-        printf("Erreur : Impossible d'ouvrir le fichier de m√©moire secondaire.\n");
+        printf("Erreur : Impossible d'ouvrir le fichier de mÈmoire secondaire.\n");
         return;
     }
 
     // Calculer la position du bloc dans le fichier
     long position = blocIndex * sizeof(BLOC);
 
-    // D√©placer le pointeur du fichier √† la position du bloc
+    // DÈplacer le pointeur du fichier ‡ la position du bloc
     fseek(ms, position, SEEK_SET);
 
     // Lire le bloc existant
     BLOC buffer;
     fread(&buffer, sizeof(BLOC), 1, ms);
 
-    // Mettre √† jour les m√©tadonn√©es dans le bloc
+    // Mettre ‡ jour les mÈtadonnÈes dans le bloc
     buffer.metadata = *metadata;
 
-    // Revenir √† la position du bloc et √©crire les m√©tadonn√©es mises √† jour
+    // Revenir ‡ la position du bloc et Ècrire les mÈtadonnÈes mises ‡ jour
     fseek(ms, position, SEEK_SET);
     if (fwrite(&buffer, sizeof(BLOC), 1, ms) != 1) {
-        printf("Erreur : Impossible de mettre √† jour les m√©tadonn√©es dans le fichier.\n");
+        printf("Erreur : Impossible de mettre ‡ jour les mÈtadonnÈes dans le fichier.\n");
     } else {
-        printf("Les m√©tadonn√©es ont √©t√© mises √† jour avec succ√®s dans le bloc %d.\n", blocIndex);
+        printf("Les mÈtadonnÈes ont ÈtÈ mises ‡ jour avec succËs dans le bloc %d.\n", blocIndex);
     }
 }
 
+void chargerContiguOrdonne(FILE *ms, METADATA *metadata) {
+    BLOC table_allocation;
+    BLOC bloc_alloue;
+    int enreg_restants = metadata->taille_enregs;
+    int nombre_blocs = metadata->taille_blocs;
 
-
-
-
-void lireTableAllocation(FILE *ms, BLOC *buffer) {
-    rewind(ms); // Replacer le pointeur de fichier au d√©but
-    if (fread(buffer, sizeof(BLOC), 1, ms) != 1) {
-        printf("Erreur : Lecture de la table d'allocation a √©chou√©.\n");
+    // Trouver un espace contigu libre
+    int debut_bloc = -1;
+    for (int i = 1; i <= MAX_BLOCS - nombre_blocs; i++) {
+        int espace_libre = 1;
+        lireTableAllocation(ms, &table_allocation);
+        for (int j = 0; j < nombre_blocs; j++) {
+            if (table_allocation.enregs[i + j].id == 1) {
+                espace_libre = 0;
+                break;
+            }
+        }
+        if (espace_libre) {
+            debut_bloc = i;
+            break;
+        }
     }
+
+    if (debut_bloc == -1) {
+        printf("Erreur : Pas d'espace contigu disponible pour allouer %d blocs.\n", nombre_blocs);
+        return;
+    }
+
+    // Initialiser le gÈnÈrateur de nombres alÈatoires
+    srand(time(NULL));
+
+    // Marquer les blocs comme occupÈs
+    lireTableAllocation(ms, &table_allocation);
+    for (int i = 0 ; i < nombre_blocs; i++) {
+        table_allocation.enregs[debut_bloc + i].id = 1; // Marquer le bloc comme occupÈ
+        sprintf(table_allocation.enregs[debut_bloc + i].nom, "Bloc_%d", debut_bloc + i);
+    }
+    rewind(ms);
+    fwrite(&table_allocation, sizeof(BLOC), 1, ms);
+
+    // Allouer les blocs et les remplir avec des valeurs alÈatoires
+    for (int i = 0; i < nombre_blocs; i++) {
+        int current_bloc = debut_bloc + i;
+
+        // Lire le bloc ‡ allouer
+        fseek(ms, current_bloc * sizeof(BLOC), SEEK_SET);
+        fread(&bloc_alloue, sizeof(BLOC), 1, ms);
+
+        // Remplir le bloc avec des valeurs alÈatoires
+        bloc_alloue.enregs_utilises = 0;
+        for (int j = 0; j < FACTEUR_BLOCS && enreg_restants > 0; j++) {
+            bloc_alloue.enregs[j].id = rand() % 1000; // Valeur alÈatoire entre 0 et 999
+            sprintf(bloc_alloue.enregs[j].nom, "Enreg_%d", rand() % 1000);
+            enreg_restants--;
+            bloc_alloue.enregs_utilises++;
+        }
+
+        // Si c'est le premier bloc du fichier crÈÈ, mettre ‡ jour les mÈtadonnÈes
+        if (i == 0) {
+            bloc_alloue.metadata = *metadata;
+        } else {
+            // Initialiser les mÈtadonnÈes des autres blocs
+            memset(&bloc_alloue.metadata, 0, sizeof(METADATA));
+        }
+
+        // …crire le bloc allouÈ dans le fichier
+        fseek(ms, current_bloc * sizeof(BLOC), SEEK_SET);
+        fwrite(&bloc_alloue, sizeof(BLOC), 1, ms);
+    }
+
+    printf("Chargement des blocs contigus ordonnÈs effectuÈ avec succËs.\n");
 }
 
+POSITION rechercherContigueOrdonnee(FILE *ms, const char *nom_fichier, int id) {
+    POSITION pos;
+    pos.bloc = -1;  // Valeur par dÈfaut indiquant que l'enregistrement n'a pas ÈtÈ trouvÈ
+    pos.deplacement = -1;
 
+    if (ms == NULL) {
+        printf("Erreur : Le fichier de stockage est invalide.\n");
+        return pos;  // VÈrifier si le pointeur du fichier est NULL
+    }
 
-
-
-void insertionContigueOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
-    printf("Insertion contigu√´ ordonn√©e\n");
-    printf("Nom du fichier : %s\n", nom_fichier);
-    printf("Nouvel enregistrement : [ID: %d, Nom: %s, ]\n", nouvel_enreg.id, nouvel_enreg.nom);
-    
-    // Logique d'insertion ici...
-    
-    printf("Insertion termin√©e dans l'ordre contigu.\n");
-}
-
-void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
-    printf("Insertion contigu√´ non ordonn√©e\n");
-    printf("Nom du fichier : %s\n", nom_fichier);
-    
-    
-    // Logique d'insertion ici...
-    
-    printf("Insertion termin√©e dans l'ordre contigu non ordonn√©.\n");
-}
-
-void insertionChaineeOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
-    printf("Insertion cha√Æne ordonn√©e\n");
-    printf("Nom du fichier : %s\n", nom_fichier);
-    
-    
-    // Logique d'insertion ici...
-    
-    printf("Insertion termin√©e dans l'ordre cha√Æne ordonn√©e.\n");
-}
-
-void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
-    printf("Insertion cha√Æne non ordonn√©e\n");
-    printf("Nom du fichier : %s\n", nom_fichier);
-  
-    // Logique d'insertion ici...
-    
-    printf("Insertion termin√©e dans l'ordre cha√Æne non ordonn√©e.\n");
-}
-
-
-int verifierIDUnique(FILE *ms, const char *nom_fichier, int id) {
     BLOC buffer;
     int adresse_premier_bloc = -1;
     int taille_fichier = 0;
     int fichier_trouve = 0;
 
     // Recherche du fichier dans le fichier de stockage
-    fseek(ms, 0, SEEK_SET);  // Positionner au d√©but du fichier
+    fseek(ms, 0, SEEK_SET);  // Positionner au dÈbut du fichier
+    while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
+        // Comparer le nom du fichier actuel avec le nom recherchÈ
+        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) {
+            fichier_trouve = 1;
+            adresse_premier_bloc = buffer.metadata.adresse_premier;
+            taille_fichier = buffer.metadata.taille_blocs;
+            break;  // Fichier trouvÈ, sortir de la boucle
+        }
+    }
+
+    // VÈrifier si le fichier a ÈtÈ trouvÈ
+    if (!fichier_trouve) {
+        printf("Erreur : fichier '%s' non trouvÈ.\n", nom_fichier);
+        return pos;  // Fichier non trouvÈ
+    }
+
+    // VÈrifier la validitÈ des mÈtadonnÈes du fichier
+    if (taille_fichier == 0 || adresse_premier_bloc == -1) {
+        printf("Erreur : Le fichier '%s' est vide ou corrompu.\n", nom_fichier);
+        return pos;
+    }
+
+    // Recherche dans les blocs contigus du fichier
+    fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET);  // Aller ‡ l'adresse du premier bloc
+    for (int i = 0; i < taille_fichier; i++) {
+        if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
+            printf("Erreur : Lecture du bloc %d a ÈchouÈ.\n", i);
+            return pos;  // Erreur de lecture du bloc
+        }
+
+        // Parcours des enregistrements du bloc pour rechercher l'ID
+        for (int j = 0; j < buffer.enregs_utilises; j++) {
+            if (buffer.enregs[j].id == id) {  // Si l'ID correspond
+                pos.bloc = adresse_premier_bloc + i;
+                pos.deplacement = j;
+                return pos;  // Retourner la position de l'enregistrement
+            }
+            if (buffer.enregs[j].id > id) { // Si l'ID est supÈrieur, on peut arrÍter la recherche
+                break; // Sortir de la boucle, car les enregistrements sont ordonnÈs
+            }
+        }
+    }
+
+    // Si l'enregistrement n'est pas trouvÈ
+    printf("Enregistrement non trouvÈ.\n");
+    return pos;  // Enregistrement non trouvÈ
+}
+
+void insertionContigueOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
+    if (ms == NULL) {
+        printf("Erreur : Le fichier de stockage est invalide.\n");
+        return;  // VÈrifier si le pointeur du fichier est NULL
+    }
+
+    BLOC table_allocation;
+    BLOC buffer;
+    int adresse_premier_bloc = -1;
+    int taille_fichier = 0;
+    int fichier_trouve = 0;
+
+    // Lire la table d'allocation depuis le premier bloc
+    rewind(ms);
+    fread(&table_allocation, sizeof(BLOC), 1, ms);
+
+    // Recherche du fichier dans le fichier de stockage
+    fseek(ms, sizeof(BLOC), SEEK_SET);  // Positionner au dÈbut aprËs la table d'allocation
     while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
         if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) {
             fichier_trouve = 1;
             adresse_premier_bloc = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
-            break;
+            break;  // Fichier trouvÈ, sortir de la boucle
         }
     }
 
+    // VÈrifier si le fichier a ÈtÈ trouvÈ
     if (!fichier_trouve) {
-        printf("Erreur : fichier '%s' non trouv√©.\n", nom_fichier);
-        return 0;  // Fichier non trouv√©
+        printf("Erreur : fichier '%s' non trouvÈ.\n", nom_fichier);
+        return;  // Fichier non trouvÈ
     }
 
-    // Parcourir les blocs contigus pour v√©rifier l'unicit√© de l'ID
+    // VÈrifier si l'ID est unique en appelant rechercherContigueOrdonnee
+    if (rechercherContigueOrdonnee(ms, nom_fichier, nouvel_enreg.id).bloc != -1) {
+        printf("Erreur : L'ID %d existe dÈj‡.\n", nouvel_enreg.id);
+        return;  // ID trouvÈ, donc non unique
+    }
+
+    // RÈinitialiser la position pour l'insertion
     fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET);
     for (int i = 0; i < taille_fichier; i++) {
         if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
-            printf("Erreur : Lecture du bloc %d a √©chou√©.\n", i);
-            return 0;
+            printf("Erreur : Lecture du bloc %d a ÈchouÈ.\n", i);
+            return;  // Erreur de lecture du bloc
         }
 
-        for (int j = 0; j < buffer.enregs_utilises; j++) {
-            if (buffer.enregs[j].id == id) {
-                printf("Erreur : L'ID %d existe d√©j√†.\n", id);
-                return 0;  // ID trouv√©, donc non unique
+        // Chercher un emplacement libre dans le bloc
+        if (buffer.enregs_utilises < FACTEUR_BLOCS) {
+            // InsÈrer le nouvel enregistrement ‡ la bonne position pour maintenir l'ordre
+            int j;
+            for (j = 0; j < buffer.enregs_utilises; j++) {
+                if (buffer.enregs[j].id > nouvel_enreg.id) {
+                    break;  // Trouver la position d'insertion
+                }
             }
-        }
-    }
-
-    return 1;  // ID unique
-}
-
-void gererInsertion(FILE *ms, METADATA* meta, const char *nom_fichier) {
-    ENREG nouvel_enreg;
-
-    // Demander √† l'utilisateur d'entrer l'ID et le nom du nouvel enregistrement
-    printf("Entrez l'ID du nouvel enregistrement : ");
-    scanf("%d", &nouvel_enreg.id);
-    
-    // Valider si l'ID est unique
-    if (!verifierIDUnique(ms, nom_fichier, nouvel_enreg.id)) {
-        printf("Insertion annul√©e : ID non unique.\n");
-        return;  // Annuler l'insertion si l'ID n'est pas unique
-    }
-
-    printf("Entrez le nom du nouvel enregistrement : ");
-    scanf("%s", nouvel_enreg.nom);
-
-    // V√©rification de l'organisation globale et interne et appel de la fonction d'insertion appropri√©e
-    if (strcmp(meta->org_globale, "contigu") == 0) {
-        if (strcmp(meta->org_interne, "ORDONNE") == 0) {
-            insertionContigueOrdonnee(ms, nom_fichier, nouvel_enreg);
-        } else if (strcmp(meta->org_interne, "NONORDONNE") == 0) {
-            insertionContigueNonOrdonnee(ms, nom_fichier, nouvel_enreg);
-        }
-    } else if (strcmp(meta->org_globale, "cha√Æn√©") == 0) {
-        if (strcmp(meta->org_interne, "ORDONNE") == 0) {
-            insertionChaineeOrdonnee(ms, nom_fichier, nouvel_enreg);
-        } else if (strcmp(meta->org_interne, "NONORDONNE") == 0) {
-            insertionChaineeNonOrdonnee(ms, nom_fichier, nouvel_enreg);
-        }
-    } else {
-        printf("Erreur : type d'organisation inconnu.\n");
-    }
-}
-
-POSITION rechercherContigueOrdonnee(FILE *ms, const char *nom_fichier, int id) {
-    POSITION pos = { -1, -1 };  // Valeur par d√©faut indiquant que l'enregistrement n'a pas √©t√© trouv√©
-    // Impl√©mentation de la recherche...
-    return pos;
-}
-POSITION rechercherContigueNonOrdonnee(FILE *ms, const char *nom_fichier, int id) {
-    POSITION pos = { -1, -1 };  // Valeur par d√©faut indiquant que l'enregistrement n'a pas √©t√© trouv√©
-    // Impl√©mentation de la recherche...
-    return pos;
-}
-POSITION rechercherChaineeOrdonnee(FILE *ms, const char *nom_fichier, int id) {
-    POSITION pos = { -1, -1 };  // Valeur par d√©faut indiquant que l'enregistrement n'a pas √©t√© trouv√©
-    // Impl√©mentation de la recherche...
-    return pos;
-}
-POSITION rechercherChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, int id) {
-    POSITION pos = { -1, -1 };  // Valeur par d√©faut indiquant que l'enregistrement n'a pas √©t√© trouv√©
-    // Impl√©mentation de la recherche...
-    return pos;
-}
-
-POSITION gererRecherche(FILE *ms, METADATA* meta, const char *nom_fichier, int id) {
-    POSITION pos;
-    pos.bloc = -1;  // Valeur par d√©faut indiquant que l'enregistrement n'a pas √©t√© trouv√©
-    pos.deplacement = -1;
-
-    // V√©rification de l'organisation globale et interne et appel de la fonction de recherche appropri√©e
-    if (strcmp(meta->org_globale, "contigu") == 0) {
-        if (strcmp(meta->org_interne, "ORDONNE") == 0) {
-            pos = rechercherContigueOrdonnee(ms, nom_fichier, id);
-        } else if (strcmp(meta->org_interne, "NONORDONNE") == 0) {
-            pos = rechercherContigueNonOrdonnee(ms, nom_fichier, id);
-        }
-    } else if (strcmp(meta->org_globale, "cha√Æn√©") == 0) {
-        if (strcmp(meta->org_interne, "ORDONNE") == 0) {
-            pos = rechercherChaineeOrdonnee(ms, nom_fichier, id);
-        } else if (strcmp(meta->org_interne, "NONORDONNE") == 0) {
-            pos = rechercherChaineeNonOrdonnee(ms, nom_fichier, id);
-        }
-    } else {
-        printf("Erreur : type d'organisation inconnu.\n");
-    }
-
-    return pos;
-}
-
-// Suppression logique : marquer comme supprim√© dans une organisation contigu√´ et ordonn√©e
-void suppressionContigueOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression logique de l'enregistrement avec ID %d dans une organisation Contigu√´ et ORDONNE.\n", id);
-    // Impl√©menter la logique pour marquer l'enregistrement comme supprim√© (par exemple, changer un flag ou une valeur sp√©ciale)
-}
-
-// Suppression physique : r√©organiser les blocs pour lib√©rer l'espace dans une organisation contigu√´ et ordonn√©e
-void suppressionContigueOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression physique de l'enregistrement avec ID %d dans une organisation Contigu√´ et ORDONNE.\n", id);
-    // Impl√©menter la logique pour supprimer physiquement l'enregistrement et r√©organiser les blocs (d√©placer, retirer l'enregistrement du bloc, etc.)
-}
-
-// Suppression logique : marquer comme supprim√© dans une organisation contigu√´ et non ordonn√©e
-void suppressionContigueNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression logique de l'enregistrement avec ID %d dans une organisation Contigu√´ et NONORDONNE.\n", id);
-    // Impl√©menter la logique pour marquer l'enregistrement comme supprim√© (par exemple, changer un flag ou une valeur sp√©ciale)
-}
-
-// Suppression physique : r√©organiser les blocs pour lib√©rer l'espace dans une organisation contigu√´ et non ordonn√©e
-void suppressionContigueNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression physique de l'enregistrement avec ID %d dans une organisation Contigu√´ et NONORDONNE.\n", id);
-    // Impl√©menter la logique pour supprimer physiquement l'enregistrement et r√©organiser les blocs (d√©placer, retirer l'enregistrement du bloc, etc.)
-}
-
-// Suppression logique : marquer comme supprim√© dans une organisation cha√Æn√©e et ordonn√©e
-void suppressionChaineeOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression logique de l'enregistrement avec ID %d dans une organisation Cha√Æn√©e et ORDONNE.\n", id);
-    // Impl√©menter la logique pour marquer l'enregistrement comme supprim√© (par exemple, changer un flag ou une valeur sp√©ciale)
-}
-
-// Suppression physique : r√©organiser les blocs pour lib√©rer l'espace dans une organisation cha√Æn√©e et ordonn√©e
-void suppressionChaineeOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression physique de l'enregistrement avec ID %d dans une organisation Cha√Æn√©e et ORDONNE.\n", id);
-    // Impl√©menter la logique pour supprimer physiquement l'enregistrement et ajuster les liens/pointeurs dans la cha√Æne
-}
-
-// Suppression logique : marquer comme supprim√© dans une organisation cha√Æn√©e et non ordonn√©e
-void suppressionChaineeNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression logique de l'enregistrement avec ID %d dans une organisation Cha√Æn√©e et NONORDONNE.\n", id);
-    // Impl√©menter la logique pour marquer l'enregistrement comme supprim√© (par exemple, changer un flag ou une valeur sp√©ciale)
-}
-
-// Suppression physique : r√©organiser les blocs pour lib√©rer l'espace dans une organisation cha√Æn√©e et non ordonn√©e
-void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
-    printf("Suppression physique de l'enregistrement avec ID %d dans une organisation Cha√Æn√©e et NONORDONNE.\n", id);
-    // Impl√©menter la logique pour supprimer physiquement l'enregistrement et ajuster les liens/pointeurs dans la cha√Æne
-}
-
-void defragmentationContigueOrdonnee(FILE *ms, const char *nom_fichier) {
-    printf("D√©fragmentation dans une organisation Contigu√´ et ORDONNE.\n");
-    // Logique pour d√©placer les enregistrements et r√©organiser les blocs
-    // Cela pourrait impliquer de compresser les blocs et d√©placer les enregistrements
-}
-
-// Fonction principale pour g√©rer la suppression en fonction de l'organisation et du type de suppression
-void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression, const char *org_globale, const char *org_interne) {
-    // V√©rification des param√®tres
-    if (ms == NULL) {
-        printf("Erreur : fichier non ouvert.\n");
-        return;
-    }
-    
-    // Logique de suppression en fonction du type d'organisation et du type de suppression
-    if (strcmp(org_globale, "Contigue") == 0) {
-        if (strcmp(org_interne, "Ordonnee") == 0) {
-            // Organisation contigu√´ et ordonn√©e
-            if (type_suppression == 1) {
-                suppressionContigueOrdonneeLogique(ms, nom_fichier, id); // Suppression logique
-            } else if (type_suppression == 2) {
-                suppressionContigueOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
-            } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Contigu√´ et Ordonn√©e.\n");
+            // DÈcaler les enregistrements pour faire de la place
+            for (int k = buffer.enregs_utilises; k > j; k--) {
+                buffer.enregs[k] = buffer.enregs[k - 1];
             }
-        } else if (strcmp(org_interne, "NonOrdonnee") == 0) {
-            // Organisation contigu√´ et non ordonn√©e
-            if (type_suppression == 1) {
-                suppressionContigueNonOrdonneeLogique(ms, nom_fichier, id); // Suppression logique
-            } else if (type_suppression == 2) {
-                suppressionContigueNonOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
-            } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Contigu√´ et NonOrdonn√©e.\n");
+            buffer.enregs[j] = nouvel_enreg;  // InsÈrer le nouvel enregistrement
+            buffer.enregs_utilises++;
+            fseek(ms, -sizeof(BLOC), SEEK_CUR);  // Revenir en arriËre pour rÈÈcrire le bloc
+            fwrite(&buffer, sizeof(BLOC), 1, ms);  // …crire le bloc mis ‡ jour
+            printf("Enregistrement insÈrÈ avec succËs : Bloc = %d, Index = %d\n", i, j);
+
+            // Mettre ‡ jour les mÈtadonnÈes du premier bloc du fichier
+            if (i == 0) {
+                buffer.metadata.taille_enregs++;
+                fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET);
+                fwrite(&buffer, sizeof(BLOC), 1, ms);
             }
-        } else {
-            printf("Erreur : organisation interne non valide.\n");
+
+            return;  // Enregistrement insÈrÈ avec succËs
         }
-    } else if (strcmp(org_globale, "Chainee") == 0) {
-        if (strcmp(org_interne, "Ordonnee") == 0) {
-            // Organisation cha√Æn√©e et ordonn√©e
-            if (type_suppression == 1) {
-                suppressionChaineeOrdonneeLogique(ms, nom_fichier, id); // Suppression logique
-            } else if (type_suppression == 2) {
-                suppressionChaineeOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
-            } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Cha√Æn√©e et Ordonn√©e.\n");
-            }
-        } else if (strcmp(org_interne, "NonOrdonnee") == 0) {
-            // Organisation cha√Æn√©e et non ordonn√©e
-            if (type_suppression == 1) {
-                suppressionChaineeNonOrdonneeLogique(ms, nom_fichier, id); // Suppression logique
-            } else if (type_suppression == 2) {
-                suppressionChaineeNonOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
-            } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Cha√Æn√©e et NonOrdonn√©e.\n");
-            }
-        } else {
-            printf("Erreur : organisation interne non valide.\n");
-        }
-    } else {
-        printf("Erreur : organisation globale non valide.\n");
-    }
-}
-
-// Fonction pour d√©fragmenter un fichier dans une organisation contigu√´ et non ordonn√©e
-void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) {
-    printf("D√©fragmentation dans une organisation Contigu√´ et NONORDONNE.\n");
-    // Logique pour d√©placer les enregistrements et r√©organiser les blocs
-    // Cela pourrait impliquer de d√©placer les enregistrements dans les blocs disponibles
-}
-
-// Fonction pour d√©fragmenter un fichier dans une organisation cha√Æn√©e et ordonn√©e
-void defragmentationChaineeOrdonnee(FILE *ms, const char *nom_fichier) {
-    printf("D√©fragmentation dans une organisation Cha√Æn√©e et ORDONNE.\n");
-    // Logique pour r√©organiser les pointeurs et compresser les blocs cha√Æn√©s
-    // Cela pourrait impliquer de d√©placer des enregistrements entre les liens dans la cha√Æne
-}
-
-// Fonction pour d√©fragmenter un fichier dans une organisation cha√Æn√©e et non ordonn√©e
-void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier) {
-    printf("D√©fragmentation dans une organisation Cha√Æn√©e et NONORDONNE.\n");
-    // Logique pour r√©organiser les pointeurs et compresser les blocs cha√Æn√©s
-    // R√©organiser les enregistrements pour r√©duire les espaces vides dans la cha√Æne
-}
-
-
-// Fonction principale pour g√©rer la d√©fragmentation en fonction de l'organisation et du type
-void gererDefragmentation(FILE *ms, const char *nom_fichier, const char *org_globale, const char *org_interne) {
-
-    if (strcmp(org_globale, "contigu") == 0) {
-        if (strcmp(org_interne, "ORDONNE") == 0) {
-            defragmentationContigueOrdonnee(ms, nom_fichier);
-        } else if (strcmp(org_interne, "NONORDONNE") == 0) {
-            defragmentationContigueNonOrdonnee(ms, nom_fichier);
-        }
-    } else if (strcmp(org_globale, "cha√Æn√©") == 0) {
-        if (strcmp(org_interne, "ORDONNE") == 0) {
-            defragmentationChaineeOrdonnee(ms, nom_fichier);
-        } else if (strcmp(org_interne, "NONORDONNE") == 0) {
-            defragmentationChaineeNonOrdonnee(ms, nom_fichier);
-        }
-    } else {
-        printf("Erreur : type d'organisation inconnu.\n");
-    }
-}
-
-
-void compactageMemoire(FILE *ms) {
-    if (ms == NULL) {
-        printf("Erreur : Impossible d'ouvrir 'memoire_secondaire.dat'.\n");
-        return;
     }
 
-    printf("D√©but du compactage de la m√©moire secondaire...\n");
+    // Si aucun espace n'est disponible pour allouer un nouveau bloc
+    int bloc_alloue = -1;
+    for (int i = 1; i < MAX_BLOCS; i++) {
+        if (table_allocation.enregs[i].id == 0) { // Si le bloc est libre
+            table_alloue = i;
+            break;
+        }
+    }
 
-    BLOC bufferLecture, bufferEcriture;
-    lireTableAllocation(ms, &bufferLecture); // Lire la table d'allocation
+    if (bloc_alloue == -1) {
+        int choix;
+        printf ("Pas de blocs disponibles pour allouer un nouveau bloc. Choisissez une option :\n");
+        printf("1. Compactage de la mÈmoire\n");
+        printf("2. Annuler l'insertion\n");
+        scanf("%d", &choix);
 
-    char fichiersTraites[MAX_BLOCS][50];
-    int nombreFichiersTraites = 0;
-
-    // Identifier et d√©fragmenter chaque fichier
-    for (int i = 0; i < MAX_BLOCS; i++) {
-        if (bufferLecture.enregs[i].id == 1) { // V√©rifier si le bloc est occup√©
-            int dejaTraite = 0;
-            for (int j = 0; j < nombreFichiersTraites; j++) {
-                if (strcmp(bufferLecture.enregs[i].nom, fichiersTraites[j]) == 0) {
-                    dejaTraite = 1;
+        if (choix == 1) {
+            compactageMemoire(ms);
+            for (int i = 1; i < MAX_BLOCS; i++) {
+                if (table_allocation.enregs[i].id == 0) { // Si le bloc est libre aprËs compactage
+                    table_alloue = i;
                     break;
                 }
             }
-
-            if (!dejaTraite) {
-                const char *nom_fichier = bufferLecture.enregs[i].nom;
-                const char *org_globale = bufferLecture.metadata.org_globale;
-                const char *org_interne = bufferLecture.metadata.org_interne;
-
-                gererDefragmentation(ms, nom_fichier, org_globale, org_interne); // D√©fragmenter le fichier
-
-                strcpy(fichiersTraites[nombreFichiersTraites], nom_fichier);
-                nombreFichiersTraites++;
-
-                if (strcmp(org_globale, "contigu") == 0) {
-                    i += bufferLecture.metadata.taille_blocs - 1; // Sauter les blocs suivants appartenant au m√™me fichier
-                } else if (strcmp(org_globale, "cha√Æn√©") == 0) {
-                    // D√©terminer l'adresse du dernier bloc pour les fichiers cha√Æn√©s
-                    int current_block = bufferLecture.metadata.adresse_premier;
-                    int last_block = current_block;
-
-                    while (current_block != -1) {
-                        BLOC buffer;
-                        fseek(ms, current_block * sizeof(BLOC), SEEK_SET);
-                        fread(&buffer, sizeof(BLOC), 1, ms);
-                        last_block = current_block;
-                        current_block = buffer.suivant; // Passer au bloc suivant dans la cha√Æne
-                    }
-
-                    i = last_block; // Sauter jusqu'au dernier bloc
-                }
-            }
-        }
-    }
-
-    int dernierBlocOccupe = 0;
-    int dernierBlocLibre = MAX_BLOCS - 1;
-    int premierBlocLibre = -1;
-
-    // Identifier le dernier bloc occup√© et le premier bloc libre
-    for (int i = 0; i < MAX_BLOCS; i++) {
-        if (bufferLecture.enregs[i].id == 1) { // Bloc occup√©
-            if (i > dernierBlocOccupe) {
-                dernierBlocOccupe = i;
-            }
-        } else { // Bloc libre
-            if (premierBlocLibre == -1) {
-                premierBlocLibre = i;
-            }
-            if (i < dernierBlocLibre) {
-                dernierBlocLibre = i;
-            }
-        }
-    }
-
-    memset(&bufferEcriture, 0, sizeof(BLOC));
-
-    // Parcourir la m√©moire pour les fichiers contigus et cha√Æn√©s
-    for (int i = 0; i <= dernierBlocOccupe; i++) {
-        if (bufferLecture.enregs[i].id == 1) { // Bloc occup√©
-            fseek(ms, (i + 1) * sizeof(BLOC), SEEK_SET);
-            fread(&bufferLecture, sizeof(BLOC), 1, ms);
-
-            if (strcmp(bufferLecture.metadata.org_globale, "contigu") == 0) {
-                // D√©placer les blocs contigus ensemble
-                int adresse_initiale = bufferLecture.metadata.adresse_premier;
-                int taille_blocs = bufferLecture.metadata.taille_blocs;
-
-                for (int j = 0; j < taille_blocs; j++) {
-                    fseek(ms, (adresse_initiale + j) * sizeof(BLOC), SEEK_SET);
-                    fread(&bufferLecture, sizeof(BLOC), 1, ms);
-                    fseek(ms, (premierBlocLibre + j) * sizeof(BLOC), SEEK_SET);
-                    fwrite(&bufferLecture, sizeof(BLOC), 1, ms);
-
-                    // Mettre √† jour la table d'allocation
-                    miseAJourTableAllocation(ms, premierBlocLibre + j, 0);
-                }
-
-                bufferLecture.metadata.adresse_premier = premierBlocLibre;
-                premierBlocLibre += taille_blocs;
-            } else if (strcmp(bufferLecture.metadata.org_globale, "cha√Æn√©") == 0) {
-                // D√©placer les blocs cha√Æn√©s et mettre √† jour les pointeurs
-                int bloc_actuel = bufferLecture.metadata.adresse_premier;
-
-                while (bloc_actuel != -1) {
-                    fseek(ms, bloc_actuel * sizeof(BLOC), SEEK_SET);
-                    fread(&bufferLecture, sizeof(BLOC), 1, ms);
-
-                    int prochain_bloc = bufferLecture.suivant;
-                    bufferLecture.suivant = premierBlocLibre;
-
-                    fseek(ms, premierBlocLibre * sizeof(BLOC), SEEK_SET);
-                    fwrite(&bufferLecture, sizeof(BLOC), 1, ms);
-
-                    miseAJourTableAllocation(ms, premierBlocLibre, 0);
-
-                    bloc_actuel = prochain_bloc;
-                    premierBlocLibre++;
-                }
-            }
-        }
-    }
-
-    // R√©√©crire la table d'allocation mise √† jour
-    fseek(ms, 0, SEEK_SET);
-    fwrite(&bufferEcriture, sizeof(BLOC), 1, ms);
-
-    printf("Le compactage de la m√©moire secondaire est termin√©.\n");
-}
-
-
-
-
-void renommerFichier(FILE *ms, const char *ancien_nom, const char *nouveau_nom) {
-    if (ms == NULL) {
-        printf("Erreur : Le fichier de stockage est invalide.\n");
-        return;
-    }
-
-    // V√©rification si le nouveau nom existe d√©j√†
-    int etat_fichier = fichierExiste(ms, nouveau_nom);
-    if (etat_fichier == 1) {
-        printf("Erreur : le nom '%s' est d√©j√† utilis√©.\n", nouveau_nom);
-        return;
-    }
-
-    BLOC buffer;
-    bool fichier_trouve = false;
-
-    // Recherche du fichier √† renommer
-    fseek(ms, sizeof(BLOC), SEEK_SET); // Positionner apr√®s la table d'allocation
-    while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
-        if (strcmp(buffer.metadata.fichier_nom, ancien_nom) == 0) {
-            fichier_trouve = true;
-            strcpy(buffer.metadata.fichier_nom, nouveau_nom); // Renommer le fichier
-            fseek(ms, -(long)sizeof(BLOC), SEEK_CUR); // Se positionner sur le bloc actuel
-            if (fwrite(&buffer, sizeof(BLOC), 1, ms) != 1) {
-                printf("Erreur lors de l'√©criture du fichier renomm√©.\n");
+            if (table_alloue == -1) {
+                printf("Erreur : Pas de blocs disponibles mÍme aprËs compactage.\n");
                 return;
             }
-            printf("Fichier '%s' renomm√© en '%s'.\n", ancien_nom, nouveau_nom);
-            break;
+        } else {
+            printf("Insertion annulÈe.\n");
+            return;
         }
     }
 
-    // Si le fichier n'a pas √©t√© trouv√©
-    if (!fichier_trouve) {
-        printf("Erreur : fichier '%s' non trouv√©.\n", ancien_nom);
-    }
+    // Initialiser le nouveau bloc
+    BLOC nouveau_bloc = {0}; // RÈinitialiser tous les champs ‡ 0
+    nouveau_bloc.enregs[0] = nouvel_enreg;  // InsÈrer le nouvel enregistrement
+    nouveau_bloc.enregs_utilises = 1;
+    nouveau_bloc.metadata = buffer.metadata;
+
+    // …crire le nouveau bloc dans la mÈmoire secondaire
+    fseek(ms, bloc_alloue * sizeof(BLOC), SEEK_SET);
+    fwrite(&nouveau_bloc, sizeof(BLOC), 1, ms);
+
+    // Mettre ‡ jour la table d'allocation
+    rewind(ms);
+    fwrite(&table_allocation, sizeof(BLOC), 1, ms);
+
+    printf("Enregistrement insÈrÈ avec succËs dans un nouveau bloc : Bloc = %d, Index = 0\n", bloc_alloue);
+
+    // Mettre ‡ jour les mÈtadonnÈes du premier bloc du fichier
+    fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET);
+    fread(&buffer, sizeof(BLOC), 1, ms);
+    buffer.metadata.taille_enregs++;
+    fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET);
+    fwrite(&buffer, sizeof(BLOC), 1, ms);
 }
 
-// Fonction pour supprimer un fichier
-void supprimerFichier(FILE *ms, const char *nom_du_fichier) {
-    BLOC buffer;
-    bool fichier_trouve = false;
-    int adresse_premier_bloc = -1, taille_fichier = 0;
-
-    // √âtape 1: Recherche du fichier √† supprimer
-    fseek(ms, 0, SEEK_SET);
-    while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
-        if (strcmp(buffer.metadata.fichier_nom, nom_du_fichier) == 0) {
-            fichier_trouve = true;
-            adresse_premier_bloc = buffer.metadata.adresse_premier;
-            taille_fichier = buffer.metadata.taille_blocs;
-            break;
-        }
-    }
-
-    // √âtape 2: Si le fichier n'a pas √©t√© trouv√©
-    if (!fichier_trouve) {
-        printf("Erreur : fichier '%s' non trouv√©.\n", nom_du_fichier); // Affichage de l'erreur
+void suppressionContigueOrdonneeLogique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
+    // VÈrifier si le pointeur du fichier est NULL
+    if (ms == NULL) {
+        printf("Erreur : Le fichier de stockage est invalide.\n");
         return;
     }
 
-    // √âtape 3: Suppression physique du fichier (vidage des blocs)
-    fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET); // Se positionner sur le premier bloc du fichier
-    for (int i = 0; i < taille_fichier; i++) {
-        memset(&buffer, 0, sizeof(BLOC)); // Vider le contenu du bloc
-        fwrite(&buffer, sizeof(BLOC), 1, ms); // √âcriture du bloc vide pour supprimer
+    // Appeler la fonction de recherche pour trouver la position de l'enregistrement
+    POSITION pos = rechercherContigueOrdonnee(ms, nom_fichier, id);
+
+    // VÈrifier si l'enregistrement a ÈtÈ trouvÈ
+    if (pos.bloc == -1) {
+        printf("Erreur : Enregistrement avec ID %d non trouvÈ dans le fichier '%s'.\n", id, nom_fichier);
+        return;
     }
 
-    // √âtape 4: Affichage du succ√®s
-    printf("Fichier '%s' supprim√© avec succ√®s.\n", nom_du_fichier);
-}
-//fonction pour trouver l'adresse du dernier bloc
-int trouveradressedernierbloc(FILE *ms, int adresse_premier_bloc,int taille_fichier ){
-	
-	fseek(ms, (adresse_premier_bloc-1) * sizeof(BLOC), SEEK_SET);
+    // Se positionner au bloc trouvÈ ‡ l'aide de fseek
+    fseek(ms, pos.bloc * sizeof(BLOC), SEEK_SET);
     BLOC buffer;
-	int j=adresse_premier_bloc;
-    int i = 0, k = -1;
-    while (i < taille_fichier && j != -1) { //verifier pour ne pas d√É¬©passer taille du fichier en blocs
-        fseek(ms, (j-1) * sizeof(BLOC), SEEK_SET);
-		fread(&buffer, sizeof(BLOC), 1, ms);
-		k=j;
-		j = buffer.suivant;
-		i++;
-	}
-	return k;
+
+    // Lire les donnÈes du bloc trouvÈ
+    if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur : Lecture du bloc %d a ÈchouÈ.\n", pos.bloc);
+        return;
+    }
+
+    // Marquer l'enregistrement comme supprimÈ en mettant l'ID ‡ -1
+    buffer.enregs[pos.deplacement].id = -1;
+
+    // Revenir ‡ la position initiale pour rÈÈcrire le bloc avec les modifications
+    fseek(ms, pos.bloc * sizeof(BLOC), SEEK_SET);
+
+    // …crire le bloc mis ‡ jour dans la mÈmoire secondaire
+    if (fwrite(&buffer, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur : …criture du bloc %d a ÈchouÈ.\n", pos.bloc);
+        return;
+    }
+
+    // Afficher un message de confirmation de la suppression logique
+    printf("Enregistrement avec ID %d marquÈ comme supprimÈ dans le fichier '%s'.\n", id, nom_fichier);
 }
 
-void viderMemoireSecondaire(FILE *ms) {
+void suppressionContigueOrdonneePhysique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
+    // VÈrifier si le pointeur du fichier est NULL
+    if (ms == NULL) {
+        printf("Erreur : Le fichier de stockage est invalide.\n");
+        return;
+    }
+
+    // Appeler la fonction de recherche pour trouver la position de l'enregistrement
+    POSITION pos = gererRecherche(ms, meta, nom_fichier, id);
+
+    // VÈrifier si l'enregistrement a ÈtÈ trouvÈ
+    if (pos.bloc == -1) {
+        printf("Erreur : Enregistrement avec ID %d non trouvÈ dans le fichier '%s'.\n", id, nom_fichier);
+        return;
+    }
+
+    // Se positionner au bloc trouvÈ ‡ l'aide de fseek
+    fseek(ms, pos.bloc * sizeof(BLOC), SEEK_SET);
+    BLOC buffer;
+
+    // Lire les donnÈes du bloc trouvÈ
+    if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur : Lecture du bloc %d a ÈchouÈ.\n", pos.bloc);
+        return;
+    }
+
+    // Supprimer l'enregistrement en dÈplaÁant les autres pour combler le vide
+    for (int k = pos.deplacement; k < buffer.enregs_utilises - 1; k++) {
+        buffer.enregs[k] = buffer.enregs[k + 1];
+    }
+    buffer.enregs_utilises--;
+
+    // VÈrifier si le bloc contient des fichiers critiques ou s'il est le premier bloc
+    bool isCriticalBlock = (strcmp(buffer.metadata.fichier_nom, "table_allocation") == 0);
+
+    // Si le bloc est maintenant vide et ne contient pas de fichiers critiques, mettre ‡ jour la table d'allocation
+    if (buffer.enregs_utilises == 0 && pos.bloc != 0 && !isCriticalBlock) {
+        fseek(ms, 0, SEEK_SET); // Retourner au dÈbut pour lire la table d'allocation
+        BLOC table_allocation;
+        fread(&table_allocation, sizeof(BLOC), 1, ms);
+        table_allocation.enregs[pos.bloc].id = 0; // Marquer le bloc comme libre
+        fseek(ms, 0, SEEK_SET); // Retourner au dÈbut pour Ècrire la table d'allocation mise ‡ jour
+        fwrite(&table_allocation, sizeof(BLOC), 1, ms);
+    } else if (pos.bloc == 0) {
+        printf("Bloc %d non libÈrÈ car il s'agit du premier bloc de fichier.\n", pos.bloc);
+    } else {
+        printf("Bloc %d non libÈrÈ car il contient un fichier critique.\n", pos.bloc);
+    }
+
+    // Mettre ‡ jour les mÈtadonnÈes
+    meta->taille_enregs--;
+
+    // Revenir en arriËre pour rÈÈcrire le bloc avec les modifications
+    fseek(ms, pos.bloc * sizeof(BLOC), SEEK_SET);
+
+    // …crire le bloc mis ‡ jour dans la mÈmoire secondaire
+    if (fwrite(&buffer, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur : …criture du bloc %d a ÈchouÈ.\n", pos.bloc);
+        return;
+    }
+
+    // Afficher un message de confirmation de la suppression physique
+    printf("Enregistrement avec ID %d supprimÈ physiquement dans le fichier '%s'.\n", id, nom_fichier);
+}
+
+// Fonction pour mettre ‡ jour la table d'allocation
+void miseAJourTableAllocation(FILE *ms, int indice, int est_libre) {
+    BLOC table_allocation;
+
+    // Lire la table d'allocation
+    rewind(ms);
+    fread(&table_allocation, sizeof(BLOC), 1, ms);
+
+    // Mettre ‡ jour la table d'allocation
+    table_allocation.enregs[indice].id = est_libre ? 0 : 1;
+
+    // …crire la table d'allocation mise ‡ jour
+    rewind(ms);
+    fwrite(&table_allocation, sizeof(BLOC), 1, ms);
+}
+
+void defragmentationContigueOrdonnee(FILE *ms, const char *nom_fichier) {
+    // VÈrifier si le pointeur du fichier est NULL
     if (ms == NULL) {
         printf("Erreur : Le fichier de stockage est invalide.\n");
         return;
     }
 
     BLOC buffer;
-    memset(&buffer, 0, sizeof(BLOC));  // Initialiser le buffer √† z√©ro
-
-    fseek(ms, 0, SEEK_SET);  // Positionner au d√©but du fichier
-    while (fwrite(&buffer, sizeof(BLOC), 1, ms) == 1);
-
-    printf("M√©moire secondaire vid√©e.\n");
-}
-
-// Fonction pour afficher le contenu des blocs dans la m√©moire secondaire
-void affichageBlocs(FILE *ms) {
-    BLOC buffer;
-    int compteur_bloc = 0;
-
-    // Revenir au d√©but du fichier
-    fseek(ms, 0, SEEK_SET);
-
-    // Lire et afficher chaque bloc de m√©moire
-    while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
-        // Afficher le num√©ro du bloc et le nombre d'enregistrements utilis√©s
-        printf("Bloc %d:\n", compteur_bloc++);
-        printf("  Nombre d'enregistrements utilises: %d\n", buffer.enregs_utilises);
-
-        // Afficher les enregistrements dans le bloc
-        for (int i = 0; i < buffer.enregs_utilises; i++) {
-            printf("    Enregistrement %d: ID=%d, Nom=%s\n", i + 1, buffer.enregs[i].id, buffer.enregs[i].nom);
-        }
-    }
-}
-
- int nombredeblocsLibres(FILE *f) { // f fichier qui contient la table d'allocation
-    rewind(f);
-
-    int table_allocation[MAX_BLOCS];
-    size_t nombre_elements_lus = fread(table_allocation, sizeof(int), MAX_BLOCS, f);
-
-    if (nombre_elements_lus != MAX_BLOCS) {
-        fprintf(stderr, "Erreur : lecture incompl√É¬®te de la table d'allocation.\n");
-        return -1;
-    }
-
-    int nombre_de_blocs_libres = 0;
-    for (int i = 0; i < MAX_BLOCS; i++) {
-        if (table_allocation[i] == 0) {  // Bloc libre
-            nombre_de_blocs_libres++;
-        }
-    }
-
-    return nombre_de_blocs_libres;  // Retourne le nombre de blocs libres
-}
-
-
-// Fonction pour quitter le programme
-void quitterProgramme(FILE *ms) {
-    // Fermer le fichier de la m√©moire secondaire (si ouvert)
-    if (ms != NULL) {
-        fclose(ms);
-        printf("MS ferm√© avec succ√®s.\n");
-    }
-
-    // Afficher un message de confirmation de sortie
-    printf("Programme termin√©. √Ä bient√¥t !\n");
-
-    // Quitter le programme
-    exit(0);
-}  
-
-
-void afficherMetadonnees(FILE *ms) {
-    if (ms == NULL) {
-        printf("Erreur : Le fichier de stockage est invalide.\n");
-        return;
-    }
-
-    BLOC buffer;
+    BLOC temp_buffer; // Buffer temporaire pour stocker les enregistrements valides
     int fichier_trouve = 0;
+    int new_adresse_bloc = 0;
+    int enregs_count = 0;
 
-    printf("+------------------------------------------------------------+\n");
-    printf("| Nom du fichier                  | Taille (blocs) | Enregs |\n");
-    printf("+------------------------------------------------------------+\n");
-
-    // Parcourir les blocs de la m√©moire secondaire pour trouver les fichiers
-    fseek(ms, sizeof(BLOC), SEEK_SET);  // Positionner apr√®s la table d'allocation
+    // Recherche du fichier dans le fichier de stockage
+    fseek(ms, sizeof(BLOC), SEEK_SET);  // Positionner au dÈbut aprËs la table d'allocation
     while (fread(&buffer, sizeof(BLOC), 1, ms) == 1) {
-        // V√©rifier si le bloc contient un fichier
-        if (buffer.enregs_utilises > 0) {
-            printf("| %-30s | %-15d | %-6d |\n", buffer.metadata.fichier_nom, buffer.metadata.taille_blocs, buffer.metadata.taille_enregs);
+        // Comparer le nom du fichier actuel avec le nom recherchÈ
+        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) {
             fichier_trouve = 1;
+            break; // Fichier trouvÈ, sortir de la boucle
         }
     }
 
+    // VÈrifier si le fichier a ÈtÈ trouvÈ
     if (!fichier_trouve) {
-        printf("| Aucune m√©tadonn√©e de fichier trouv√©e.                      |\n");
+        printf("Erreur : fichier '%s' non trouvÈ.\n", nom_fichier);
+        return;
     }
 
-    printf("+------------------------------------------------------------+\n");
+    // Initialiser le buffer temporaire
+    temp_buffer.enregs_utilises = 0;
+    temp_buffer.metadata = buffer.metadata;
+
+    // Parcourir les blocs et dÈplacer les enregistrements valides
+    fseek(ms, buffer.metadata.adresse_premier * sizeof(BLOC), SEEK_SET);
+    for (int i = 0; i < buffer.metadata.taille_blocs; i++) {
+ if (fread(&buffer, sizeof(BLOC), 1, ms) != 1) {
+            // VÈrifier si la lecture du bloc a ÈchouÈ
+            printf("Erreur : Lecture du bloc %d a ÈchouÈ.\n", i);
+            return;
+        }
+
+        // Parcourir les enregistrements du bloc
+        for (int j = 0; j < buffer.enregs_utilises; j++) {
+            if (buffer.enregs[j].id != -1) { // VÈrifier si l'enregistrement n'est pas marquÈ comme supprimÈ
+                // Copier l'enregistrement valide dans le buffer temporaire
+                temp_buffer.enregs[temp_buffer.enregs_utilises++] = buffer.enregs[j];
+                enregs_count++;
+
+                // Si le buffer temporaire est plein, Ècrire dans le fichier de stockage
+                if (temp_buffer.enregs_utilises == FACTEUR_BLOCS) {
+                    fseek(ms, new_adresse_bloc * sizeof(BLOC), SEEK_SET);
+                    fwrite(&temp_buffer, sizeof(BLOC), 1, ms);
+                    // Mettre ‡ jour la table d'allocation
+                    miseAJourTableAllocation(ms, new_adresse_bloc, 0);
+                    new_adresse_bloc++;
+                    temp_buffer.enregs_utilises = 0;  // RÈinitialiser le buffer temporaire
+                }
+            }
+        }
+
+        // Si le bloc actuel devient vide, mettre ‡ jour la table d'allocation
+        if (buffer.enregs_utilises == 0) {
+            miseAJourTableAllocation(ms, i, 1);
+        }
+    }
+
+    // …crire le reste des enregistrements du buffer temporaire s'il n'est pas vide
+    if (temp_buffer.enregs_utilises > 0) {
+        fseek(ms, new_adresse_bloc * sizeof(BLOC), SEEK_SET);
+        fwrite(&temp_buffer, sizeof(BLOC), 1, ms);
+        // Mettre ‡ jour la table d'allocation
+        miseAJourTableAllocation(ms, new_adresse_bloc, 0);
+        new_adresse_bloc++;
+    }
+
+    // Mise ‡ jour des mÈtadonnÈes
+    buffer.metadata.taille_blocs = (enregs_count + FACTEUR_BLOCS - 1) / FACTEUR_BLOCS;
+    buffer.metadata.taille_enregs = enregs_count;
+    fseek(ms, buffer.metadata.adresse_premier * sizeof(BLOC), SEEK_SET);
+    fwrite(&buffer, sizeof(BLOC), 1, ms);
+
+    printf("DÈfragmentation terminÈe pour le fichier '%s'.\n", nom_fichier);
 }
-
-
-
