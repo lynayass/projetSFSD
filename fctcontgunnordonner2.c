@@ -134,8 +134,9 @@ void chargerContiguNonOrdonne(FILE *ms, METADATA *metadata) {
         if (i == 0) {
             bloc_alloue.metadata = *metadata;
         } else {
-            // Initialiser les métadonnées des autres blocs
-            memset(&bloc_alloue.metadata, 0, sizeof(METADATA));
+            // Mettre à jour seulement le nom du fichier pour les autres blocs
+            strcpy(bloc_alloue.metadata.fichier_nom, metadata->fichier_nom);
+            memset(&bloc_alloue.metadata + sizeof(bloc_alloue.metadata.fichier_nom), 0, sizeof(METADATA) - sizeof(bloc_alloue.metadata.fichier_nom));
         }
 
         // Écrire le bloc alloué dans le fichier
@@ -210,11 +211,11 @@ POSITION rechercherContigueNonOrdonnee(FILE *ms, const char *nom_fichier, int id
 }
 
 
-
+// Fonction pour insérer un enregistrement de manière contiguë non ordonnée
 void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg) {
     if (ms == NULL) {
         printf("Erreur : Le fichier de stockage est invalide.\n");
-        return;  // Vérifier si le pointeur du fichier est NULL
+        return;
     }
 
     BLOC table_allocation;
@@ -238,10 +239,9 @@ void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouve
         }
     }
 
-    // Vérifier si le fichier a été trouvé
     if (!fichier_trouve) {
         printf("Erreur : fichier '%s' non trouvé.\n", nom_fichier);
-        return;  // Fichier non trouvé
+        return;
     }
 
     // Vérifier si l'ID est unique en appelant rechercherContigueNonOrdonnee
@@ -318,7 +318,7 @@ void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouve
     BLOC nouveau_bloc = {0}; // Réinitialiser tous les champs à 0
     nouveau_bloc.enregs[0] = nouvel_enreg;
     nouveau_bloc.enregs_utilises = 1;
-    nouveau_bloc.metadata = buffer.metadata;
+    strcpy(nouveau_bloc.metadata.fichier_nom, nom_fichier);
 
     // Écrire le nouveau bloc dans la mémoire secondaire
     fseek(ms, bloc_alloue * (long)sizeof(BLOC), SEEK_SET);
@@ -337,6 +337,8 @@ void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouve
     fseek(ms, adresse_premier_bloc * (long)sizeof(BLOC), SEEK_SET);
     fwrite(&buffer, sizeof(BLOC), 1, ms);
 }
+
+
 
 
 void suppressionContigueNonOrdonneeLogique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
@@ -381,7 +383,6 @@ void suppressionContigueNonOrdonneeLogique(FILE *ms, METADATA *meta, const char 
     printf("Enregistrement avec ID %d marqué comme supprimé dans le fichier '%s'.\n", id, nom_fichier);
 }
 
-
 void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
     // Vérifier si le pointeur du fichier est NULL
     if (ms == NULL) {
@@ -419,19 +420,24 @@ void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char
 
     // Si le bloc est maintenant vide et ne contient pas de fichiers critiques, mettre à jour la table d'allocation
     if (buffer.enregs_utilises == 0 && pos.bloc != 0 && !isCriticalBlock) {
-        fseek(ms, 0, SEEK_SET); // Retourner au début pour lire la table d'allocation
+        // Lecture de la table d'allocation depuis le premier bloc
+        fseek(ms, 0, SEEK_SET);
         BLOC table_allocation;
         fread(&table_allocation, sizeof(BLOC), 1, ms);
-        table_allocation.enregs[pos.bloc].id = 0; // Marquer le bloc comme libre
-        fseek(ms, 0, SEEK_SET); // Retourner au début pour écrire la table d'allocation mise à jour
+        
+        // Marquer le bloc comme libre dans la table d'allocation
+        table_allocation.enregs[pos.bloc].id = 0;
+        
+        // Écrire la table d'allocation mise à jour
+        fseek(ms, 0, SEEK_SET);
         fwrite(&table_allocation, sizeof(BLOC), 1, ms);
-    } else if (pos.bloc == 0) {
-        printf("Bloc %d non libéré car il s'agit du premier bloc de fichier.\n", pos.bloc);
-    } else {
-        printf("Bloc %d non libéré car il contient un fichier critique.\n", pos.bloc);
+
+        // Réinitialiser les métadonnées du bloc
+        memset(&buffer.metadata, 0, sizeof(METADATA));
+        strcpy(buffer.metadata.fichier_nom, " ");
     }
 
-    // Mettre à jour les métadonnées
+    // Mettre à jour les métadonnées du fichier
     meta->taille_enregs--;
 
     // Revenir en arrière pour réécrire le bloc avec les modifications
@@ -446,7 +452,6 @@ void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char
     // Afficher un message de confirmation de la suppression physique
     printf("Enregistrement avec ID %d supprimé physiquement dans le fichier '%s'.\n", id, nom_fichier);
 }
-
 
 void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) {
     // Vérifier si le pointeur du fichier est NULL
@@ -521,6 +526,16 @@ void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) {
             buffer.enregs[i].id = 0; // Marquer le bloc comme libre
             fseek(ms, 0, SEEK_SET);
             fwrite(&buffer, sizeof(BLOC), 1, ms);
+            
+            // Réinitialiser les métadonnées du bloc
+            strcpy(buffer.metadata.fichier_nom, " ");
+            buffer.metadata.taille_blocs = 0;
+            buffer.metadata.taille_enregs = 0;
+            buffer.metadata.adresse_premier = 0;
+            memset(buffer.metadata.org_globale, 0, sizeof(buffer.metadata.org_globale));
+            memset(buffer.metadata.org_interne, 0, sizeof(buffer.metadata.org_interne));
+            fseek(ms, i * sizeof(BLOC), SEEK_SET);
+            fwrite(&buffer, sizeof(BLOC), 1, ms);
         }
     }
 
@@ -545,3 +560,4 @@ void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) {
 
     printf("Défragmentation terminée pour le fichier '%s'.\n", nom_fichier);
 }
+
