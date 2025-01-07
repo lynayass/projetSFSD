@@ -120,6 +120,19 @@ int allouerNouveauBloc(FILE *ms) {
 
 
 
+//Fonction pour chercher le premier bloc libre dans la table d'allocation et le marquer comme occupé
+int chercherBlocLibre(int *tablleAllocation ){
+	int k=1;
+    for(k=1; k < MAX_BLOCS; k++){
+		if(tablleAllocation[k] == 0){  // Si un bloc est libre (valeur 0),
+			tablleAllocation[k] = 1 ;  //marquer comme occupé
+            return k+1;  //  retourner l'indice de ce bloc
+		}
+	}
+    return -1;
+}
+
+
 // Fonction pour générer une chaîne de caractères aléatoire
 void rand_string(char* str, int num){
 	// Remplir la chaîne avec des lettres aléatoires entre 'a' et 'z'
@@ -129,78 +142,83 @@ void rand_string(char* str, int num){
 	str[num] = '\0';   // // Ajouter un terminateur null à la fin de la chaîne
 }
 
-// Fonction pour chercher le premier bloc libre dans la table d'allocation et le marquer comme occupé
-int chercherBlocLibre(int tablleAllocation[MAX_BLOCS] ){
-	for(int k=1; k<(MAX_BLOCS ); k++ ){
-		if(tablleAllocation[k] == 0){  // Si un bloc est libre (valeur 0),
-			tablleAllocation[k] = 1 ;  //marquer comme occupé
-			return k;  //  retourner l'indice de ce bloc
-		}
-	}
-}
 
 // Fonction pour charger un fichier dans une organisation chaînée non ordonnée
-void chargerChaineeNonOrdonnee(FILE *ms, METADATA metadata) {
-	printf("Chargement du fichier '%s' dans une organisation Chainee Non ORDONNE.\n", metadata.fichier_nom);
+void chargerChaineeOrdonnee(FILE *ms, METADATA metadata) {
+    printf("Chargement du fichier '%s' dans une organisation Chaînée Non ORDONNE.\n", metadata.fichier_nom);
     BLOC buffer1;
     BLOC buffer2;
-    int tablleAllocation[MAX_BLOCS ] = {0};  // Initialiser tablleAllocation avec des zéros
-    int j,k,emplacementBlocPresedent,i,position = 0;
-    
-    rewind(ms);     // Réinitialiser le curseur du fichier pour lire depuis le début
-    
-    if (fread(&buffer1, sizeof(buffer1), 1, ms) != 1) {    //Lecture de la table d'allocation
-        printf("Erreur : Impossible de lire le fichier.\n");
-        return; }
-    for(k=0; k<(MAX_BLOCS ); k++ ){
-    	tablleAllocation[k] = buffer1.enregs[k].id;    //mettre la table d'allocation (buffer1) dans une variable tablleAllocation
-	}
-	
-    srand(time(NULL));    // Initialiser le générateur de nombres aléatoires
-    j = 0;
-	for(i=0; i<metadata.taille_blocs; i++){     // Boucle pour lire et traiter chaque bloc
-	    emplacementBlocPresedent = position;  //sauvegarder l'adresse du bloc précédent dans variable emplacementBlocPresedent
-		buffer1.enregs_utilises = 0;    // Réinitialiser le compteur des enregistrements utilisés
-		
-		while(j<metadata.taille_enregs && buffer1.enregs_utilises <= FACTEUR_BLOCS){   // Remplir les enregistrements avec des IDs et des noms aléatoires
-		    buffer1.enregs[buffer1.enregs_utilises].id = rand();     // Assigner un ID aléatoire
-		    rand_string(buffer1.enregs[buffer1.enregs_utilises].nom , 49);   // Générer un nom aléatoire
-		    buffer1.enregs_utilises++;   // Augmenter le compteur des enregistrements utilisés
-		    j++;
-	    }
-	    position = chercherBlocLibre(tablleAllocation);    //retourner l'indice de prochain bloc libre et marquer comme occupé
-	    if(i == 0){  // Pour le premier bloc
-     		buffer1.metadata.adresse_premier = position;   // sauvegarder l'adresse du premier bloc de fichier dans variable metadata
-     		memcpy(&buffer1.metadata, &metadata, sizeof(metadata));   // Copier les métadonnées de fichier dans buffer1
-		 }else{
-		 	// Pour les autres blocs, lier le bloc précédent au bloc actuel
-		 	buffer2.suivant = position ;  //remplire la position de bloc actuel dans le bloc précédent
-	        fseek(ms, (emplacementBlocPresedent-1) * sizeof(buffer2), SEEK_SET);
-	        if(i != 1){
-	        	buffer2.metadata.fichier_nom == " ";
-			}
-	        if (fwrite(&buffer2, sizeof(buffer2), 1, ms) != 1) { //ecrire le bloc précédent dans le fichier
-                printf("Erreur : Impossible d'écrire dans le fichier.\n"); 
-				}
-		  }
-	    memcpy(&buffer2, &buffer1, sizeof(buffer1));   // Copier le contenu du buffer1 dans buffer2 pour le prochain tour (sauvegarder le bloc dans buffer2 pour remplire le bloc suivant)
-   	}
-   	buffer2.suivant = -1 ;   // Terminer la chaîne de blocs en mettant le champ 'suivant' à -1 dans dernier bloc 
-	fseek(ms, (position-1) * sizeof(buffer2), SEEK_SET);
-	if(i != 1){
-	    buffer2.metadata.fichier_nom == " ";
-	}
-   	if (fwrite(&buffer2, sizeof(buffer2), 1, ms) != 1) { //ecrire le deriier bloc dans le fichier 
-        printf("Erreur : Impossible d'écrire dans le fichier.\n"); 
-	}
-	// Réécrire la table d'allocation mise à jour dans le fichier
-   	rewind(ms);
-   	 for(k=0; k<(MAX_BLOCS); k++ ){
-    	buffer1.enregs[k].id = tablleAllocation[k];
-	 }
-   	fwrite(&buffer1,sizeof(buffer1),1,ms); 
-}
+    int tablleAllocation[MAX_BLOCS] = {0};  // Initialiser tablleAllocation avec des zéros
+    int j = 0, position = 0, emplacementBlocPresedent,i;
 
+    rewind(ms);   // Réinitialiser le curseur du fichier pour lire depuis le début
+    if (fread(&buffer1, sizeof(buffer1), 1, ms) != 1) {  // Lecture de la table d'allocation
+        perror("Erreur : Impossible de lire le fichier.\n");
+        return;
+    }
+    
+    for(int k = 0; k < MAX_BLOCS; k++) { // Copier la table d'allocation
+        tablleAllocation[k] = buffer1.enregs[k].id;
+    } 
+
+    // Pour chaque bloc
+    for( i = 0; i < metadata.taille_blocs; i++) {
+        emplacementBlocPresedent = position;  //sauvegarder l'adresse du bloc précédent dans variable emplacementBlocPresedent
+        memset(&buffer1, 0, sizeof(BLOC)); // Réinitialiser buffer1
+
+        // Remplir le bloc courant avec des enregistrements alétoire 
+        while(j < metadata.taille_enregs && buffer1.enregs_utilises < FACTEUR_BLOCS) {
+            buffer1.enregs[buffer1.enregs_utilises].id = rand(); // génerer ID aléatoire
+            rand_string(buffer1.enregs[buffer1.enregs_utilises].nom, 49);  // Générer un nom aléatoire
+            buffer1.enregs_utilises++;  // Augmenter le compteur des enregistrements utilisés
+            j++; // Augmenter le compteur des enregistrements total dans le fichier 
+        }
+
+        // Trouver un bloc libre
+        position = chercherBlocLibre(tablleAllocation); ////retourner l'indice de bloc libre et marquer comme occupé 
+        if(position == -1){
+            printf("No free blocks available\n");
+            return;
+        }
+        strcpy(buffer1.metadata.fichier_nom, metadata.fichier_nom); //remplire le nom du fichier dans buffer1
+        if(i == 0) {// Premier bloc
+            metadata.adresse_premier = position;    // sauvegarder l'adresse du premier bloc de fichier dans variable metadata 
+            memcpy(&buffer1.metadata, &metadata, sizeof(METADATA)); // Copier les métadonnées de fichier dans buffer1
+        } else {
+            // Mettre à jour le pointeur du bloc précédent
+            buffer2.suivant = position;  //remplire la position de bloc actuel dans le bloc précédent
+            fseek(ms, (emplacementBlocPresedent-1) * sizeof(BLOC), SEEK_SET);
+            if (fwrite(&buffer2, sizeof(BLOC), 1, ms) != 1) {  //ecrire le bloc précédent dans le fichier
+                printf("Erreur d'écriture du bloc précédent\n");
+                return;
+            }
+            fseek(ms, (emplacementBlocPresedent-1) * sizeof(BLOC), SEEK_SET);
+            fread(&buffer2, sizeof(BLOC), 1, ms);
+        }
+
+        // Sauvegarder le bloc courant pour le prochain tour
+        memcpy(&buffer2, &buffer1, sizeof(BLOC));
+    }
+
+    // Écrire le dernier bloc
+    buffer2.suivant = -1;  // Terminer la chaîne de blocs en mettant le champ 'suivant' à -1  
+    fseek(ms, (position-1) * sizeof(BLOC), SEEK_SET);
+    if (fwrite(&buffer2, sizeof(BLOC), 1, ms) != 1) {  //ecrire le dernier bloc dans le fichier 
+        printf("Erreur d'écriture du dernier bloc\n");
+        return;
+    }
+
+    // Mettre à jour la table d'allocation
+    rewind(ms);
+    for(int k = 0; k < MAX_BLOCS; k++) {
+        buffer1.enregs[k].id = tablleAllocation[k];
+    }
+    if (fwrite(&buffer1, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur de mise à jour de la table d'allocation\n");
+    }
+
+    printf("Chargement terminé avec succès\n");
+}
 
 
 // Fonction d'insertion dans une organisation chaînée et non ordonnée
@@ -229,7 +247,7 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
 		    
 			fseek(ms, (i-1) * sizeof(BLOC), SEEK_SET);
 			fread(&buffer, sizeof(BLOC), 1, ms);
-	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
+	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0 && buffer.metadata.adresse_premier==i) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
             fichier_trouve = true;
             adresse_premier = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
@@ -307,6 +325,7 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
         fseek(ms, (j-1) * sizeof(BLOC), SEEK_SET); //accéder au nouveau dernier bloc 
 		buffer.enregs[0] = nouvel_enreg;  // Inserer l'enregistrement au debut du nouveau bloc allouer
         buffer.enregs_utilises = 1;  // incrémenter le nombre d'enregistrements utilsés à 1
+		buffer.metadata.fichier_nom = nom_fichier ; //remplire la matdonnée du nom
 		fwrite(&buffer, sizeof(BLOC), 1, ms); // le mettre à jour dans la mémoire secondaire 
         
 		//mettre à jour la table d'allocation 
@@ -314,12 +333,18 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
         buffer = table_allocation;
         rewind(ms);//se deplacer au tout debut du fichier de la mémoire secondaire 
         fwrite(&buffer, sizeof(BLOC), 1, ms); //modifier la table d'allocation dans la mémoire secondaire 
-	   
+	    
+	    // mettre à jour les metadonnée stockées dans le premire bloc  
+			 fseek(ms, (adresse_premier-1)*sizeof(BLOC), SEEK_SET);
+			 fread(&buffer, sizeof(BLOC), 1, ms);
+			 buffer.metadata.taille_enregs++;
+			 buffer.metadata.taille_blocs++;
+			 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+			 fwrite(&buffer, sizeof(BLOC), 1, ms);  
 	 
-	}
      
 }
-
+}
 
 
 // Fonction de recherche dans une organisation chaînée et non ordonnée
@@ -352,7 +377,7 @@ POSITION rechercherChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, int id)
 		    
 			fseek(ms, (i-1) * sizeof(BLOC), SEEK_SET);
 		    fread(&buffer, sizeof(BLOC), 1, ms);
-	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
+	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0 && buffer.metadata.adresse_premier==i) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
             fichier_trouve = true;
             adresse_premier = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
@@ -424,7 +449,7 @@ void suppressionChaineeNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int
 		    
 			fseek(ms, (i-1) * sizeof(BLOC), SEEK_SET);
 		    fread(&buffer, sizeof(BLOC), 1, ms);
-	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
+	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0 && buffer.metadata.adresse_premier==i) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
             fichier_trouve = true;
             adresse_premier = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
@@ -492,7 +517,7 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
 		    
 			fseek(ms, (i-1) * sizeof(BLOC), SEEK_SET);
 		    fread(&buffer, sizeof(BLOC), 1, ms);
-	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
+	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0 && buffer.metadata.adresse_premier==i) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
             fichier_trouve = true;
             adresse_premier = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
@@ -507,35 +532,38 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
         return;
     }
     adresse_dernier_bloc = trouveradressedernierbloc(ms,adresse_premier, taille_fichier); //l'adresse du dernier bloc
-    
+            
 	//trouver le dernière enregistrement du fichier 
     fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
     fread(&buffer, sizeof(BLOC), 1, ms);
+	
 	ENREG dernier_enregistrement = buffer.enregs[buffer.enregs_utilises]; 
 
      
     // chercher l'enregistrement
             	POSITION p = rechercherChaineeNonOrdonnee(ms, nom_fichier,id);
-                fseek(ms, (p.bloc-1) * sizeof(BLOC), SEEK_SET); // accéder au bloc ou se trouve l'enregistrement a suprimer physiquement du fichier
-				fread(&buffer, sizeof(BLOC), 1, ms); 
-				
-				if (p.bloc != -1) {
-            	
-				   buffer.enregs[p.deplacement] = dernier_enregistrement;
-            	   buffer.enregs_utilises--; //décrémenter le nombre d'enregistrements utilisés
-           
-		    	if (buffer.enregs_utilises == 0){// le bloc correspondant devient vide 
-            		taille_fichier--; //décrémenter la taille du fichier en blocs
+                
+				if (p.bloc != -1) { //l'enregistrement à supprimer existe 
+            	   fseek(ms, (p.bloc-1) * sizeof(BLOC), SEEK_SET); // accéder au bloc ou se trouve l'enregistrement a suprimer physiquement du fichier
+				   fread(&buffer, sizeof(BLOC), 1, ms); 
+				   buffer.enregs[p.deplacement] = dernier_enregistrement;//ecraser l'enregistrement à supprimer par le dernier enregistrement du fichier
+            	   fseek(ms, -1 * sizeof(BLOC), SEEK_SET);
+				   fwrite(&buffer, sizeof(BLOC), 1, ms); 
+				   
+                if (taille_enregs==(taille_fichier-1)*FACTEUR_BLOCS+1){// le dernier bloc ne contenait qu'un seul enregistrement donc il deviendra vide aprés suppresion
             		table_allocation.enregs[adresse_dernier_bloc].id == 0; //mettre à jour la table d'alloction (marquer le bloc comme libre)
-            		adresse_avant_dernier_bloc=trouveradressedernierbloc(ms,adresse_premier, taille_fichier-1); //l'adresse de l'avant dernier bloc
-            	if 	(adresse_avant_dernier_bloc != -1){ // la taille du fichier > 1 
-				
-            	 fseek(ms, (adresse_avant_dernier_bloc-1)*sizeof(BLOC), SEEK_SET); // accéder à l'avant dernier bloc
-				 fread(&buffer, sizeof(BLOC), 1, ms); 
-				 buffer.suivant =-1; //l'avant dernier bloc devient le dernier bloc				  
-				 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
-				 fwrite(&buffer, sizeof(BLOC), 1, ms); 	
-			    
+            		
+					fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
+                    fread(&buffer, sizeof(BLOC), 1, ms);
+                    buffer.enregs_utilises=0;
+					buffer.metadata.fichier_nom= " "; //initiliser les metadonnées du dernier bloc
+                    fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
+                    fwrite(&buffer, sizeof(BLOC), 1, ms); 
+                    
+					adresse_avant_dernier_bloc=trouveradressedernierbloc(ms,adresse_premier, taille_fichier-1); //l'adresse de l'avant dernier bloc
+            	
+				if 	(adresse_avant_dernier_bloc != -1){ // cas: le fichir contient plus d'un blos  
+			
 			    //mettre à jour les metadonnés dans le premier bloc 
 				 fseek(ms, (adresse_premier-1)*sizeof(BLOC), SEEK_SET);
 				 fread(&buffer, sizeof(BLOC), 1, ms);
@@ -600,7 +628,7 @@ void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier) {
 		    
 			fseek(ms, (i-1) * sizeof(BLOC), SEEK_SET);
 		    fread(&buffer, sizeof(BLOC), 1, ms);
-	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
+	        if (strcmp(buffer.metadata.fichier_nom, nom_fichier) == 0 && buffer.metadata.adresse_premier==i) { //comparer le nom du fichier avec les fichiers existants dans la mémoire secondaire 
             fichier_trouve = true;
             adresse_premier = buffer.metadata.adresse_premier;
             taille_fichier = buffer.metadata.taille_blocs;
@@ -644,5 +672,3 @@ void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier) {
   	i++;
 	     
   }
-    
-}
