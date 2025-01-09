@@ -80,7 +80,8 @@ void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier);
 void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) ;
 
 void defragmentationContigueOrdonnee(FILE *ms, const char *nom_fichier);
-void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression, const char *org_globale, const char *org_interne);
+void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression);
+
 void compactageMemoire(FILE *ms);
 
 void gererDefragmentation(FILE *ms, const char *nom_fichier, const char *org_globale, const char *org_interne);
@@ -160,11 +161,11 @@ int main() {
             case 7:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
-                printf("Entrez l'ID de l'enregistrement à supprimer: ");
-                scanf("%d", &id);
-                printf("Type de suppression (1 pour logique, 2 pour physique): ");
-                scanf("%d", &type_suppression);
-                gererSuppression(ms, nom_fichier, id, type_suppression, meta.org_globale, meta.org_interne);
+		    printf("Entrez l'ID de l'enregistrement à supprimer: ");
+		    scanf("%d", &id);
+		    printf("Type de suppression (1 pour logique, 2 pour physique): "); 
+		    scanf("%d", &type_suppression);
+		    gererSuppression(ms, nom_fichier, id, type_suppression); 
                 break;
             case 8:
                 printf("Entrez le nom du fichier: ");
@@ -1198,13 +1199,25 @@ void defragmentationContigueOrdonnee(FILE *ms, const char *nom_fichier) {
 }
 
 // Fonction principale pour gérer la suppression en fonction de l'organisation et du type de suppression
-void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression, const char *org_globale, const char *org_interne) {
+void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppression) {
     // Vérification des paramètres
     if (ms == NULL) {
         printf("Erreur : fichier non ouvert.\n");
         return;
     }
-    
+
+    // Lire le premier bloc du fichier utilisateur pour obtenir les métadonnées
+    fseek(ms, 0, SEEK_SET);
+    BLOC premier_bloc;
+    if (fread(&premier_bloc, sizeof(BLOC), 1, ms) != 1) {
+        printf("Erreur : Lecture du premier bloc a échoué.\n");
+        return;
+    }
+
+    // Extraire le type d'organisation globale et interne des métadonnées
+    const char *org_globale = premier_bloc.metadata.org_globale;
+    const char *org_interne = premier_bloc.metadata.org_interne;
+
     // Logique de suppression en fonction du type d'organisation et du type de suppression
     if (strcmp(org_globale, "Contigue") == 0) {
         if (strcmp(org_interne, "Ordonnee") == 0) {
@@ -1223,7 +1236,7 @@ void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppre
             } else if (type_suppression == 2) {
                 suppressionContigueNonOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
             } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Contiguë et NonOrdonnée.\n");
+                printf("Erreur : type de suppression invalide pour l'organisation Contiguë et NonOrdonnee.\n");
             }
         } else {
             printf("Erreur : organisation interne non valide.\n");
@@ -1245,7 +1258,7 @@ void gererSuppression(FILE *ms, const char *nom_fichier, int id, int type_suppre
             } else if (type_suppression == 2) {
                 suppressionChaineeNonOrdonneePhysique(ms, nom_fichier, id); // Suppression physique
             } else {
-                printf("Erreur : type de suppression invalide pour l'organisation Chaînée et NonOrdonnée.\n");
+                printf("Erreur : type de suppression invalide pour l'organisation Chaînée et NonOrdonnee.\n");
             }
         } else {
             printf("Erreur : organisation interne non valide.\n");
