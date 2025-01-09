@@ -144,7 +144,8 @@ void rand_string(char* str, int num){
 
 
 // Fonction pour charger un fichier dans une organisation chaînée non ordonnée
-void chargerChaineeOrdonnee(FILE *ms, METADATA metadata) {
+
+void chargerChaineNonOrdonne(FILE *ms, METADATA metadata) {
     printf("Chargement du fichier '%s' dans une organisation Chaînée Non ORDONNE.\n", metadata.fichier_nom);
     BLOC buffer1;
     BLOC buffer2;
@@ -161,6 +162,7 @@ void chargerChaineeOrdonnee(FILE *ms, METADATA metadata) {
         tablleAllocation[k] = buffer1.enregs[k].id;
     } 
 
+    srand(time(0));
     // Pour chaque bloc
     for( i = 0; i < metadata.taille_blocs; i++) {
         emplacementBlocPresedent = position;  //sauvegarder l'adresse du bloc précédent dans variable emplacementBlocPresedent
@@ -271,7 +273,7 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
     if (buffer.enregs_utilises < FACTEUR_BLOCS) {
     	buffer.enregs_utilises++; // incrémenter le nombre d'enregistrements utilsés
         buffer.enregs[buffer.enregs_utilises] = nouvel_enreg; // Inserer le nouvel enregistrement
-        fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+        fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
         fwrite(&buffer, sizeof(BLOC), 1, ms);
         printf("Enregistrement insére avec succes.\n");
     } else {
@@ -325,7 +327,7 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
         fseek(ms, (j-1) * sizeof(BLOC), SEEK_SET); //accéder au nouveau dernier bloc 
 		buffer.enregs[0] = nouvel_enreg;  // Inserer l'enregistrement au debut du nouveau bloc allouer
         buffer.enregs_utilises = 1;  // incrémenter le nombre d'enregistrements utilsés à 1
-		buffer.metadata.fichier_nom = nom_fichier ; //remplire la matdonnée du nom
+		strcpy(buffer.metadata.fichier_nom, nom_fichier); //remplire la matdonnée du nom
 		fwrite(&buffer, sizeof(BLOC), 1, ms); // le mettre à jour dans la mémoire secondaire 
         
 		//mettre à jour la table d'allocation 
@@ -339,7 +341,7 @@ void insertionChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel
 			 fread(&buffer, sizeof(BLOC), 1, ms);
 			 buffer.metadata.taille_enregs++;
 			 buffer.metadata.taille_blocs++;
-			 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+			 fseek(ms, (adresse_premier-1)*sizeof(BLOC), SEEK_SET);
 			 fwrite(&buffer, sizeof(BLOC), 1, ms);  
 	 
      
@@ -421,7 +423,6 @@ POSITION rechercherChaineeNonOrdonnee(FILE *ms, const char *nom_fichier, int id)
 }
     
 
-
 // Suppression logique : marquer comme supprimé dans une organisation chaînée et non ordonnée
 void suppressionChaineeNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
      
@@ -490,8 +491,6 @@ void suppressionChaineeNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int
 }
 
 
-
-
 // Suppression physique : réorganiser les blocs pour libérer l'espace dans une organisation chaînée et non ordonnée
 void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
     
@@ -547,7 +546,7 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
             	   fseek(ms, (p.bloc-1) * sizeof(BLOC), SEEK_SET); // accéder au bloc ou se trouve l'enregistrement a suprimer physiquement du fichier
 				   fread(&buffer, sizeof(BLOC), 1, ms); 
 				   buffer.enregs[p.deplacement] = dernier_enregistrement;//ecraser l'enregistrement à supprimer par le dernier enregistrement du fichier
-            	   fseek(ms, -1 * sizeof(BLOC), SEEK_SET);
+            	   fseek(ms, (p.bloc-1) * sizeof(BLOC), SEEK_SET);
 				   fwrite(&buffer, sizeof(BLOC), 1, ms); 
 				   
                 if (taille_enregs==(taille_fichier-1)*FACTEUR_BLOCS+1){// le dernier bloc ne contenait qu'un seul enregistrement donc il deviendra vide aprés suppresion
@@ -556,7 +555,7 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
 					fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
                     fread(&buffer, sizeof(BLOC), 1, ms);
                     buffer.enregs_utilises=0;
-					buffer.metadata.fichier_nom= " "; //initiliser les metadonnées du dernier bloc
+					strcpy(buffer.metadata.fichier_nom, " "); //initiliser les metadonnées du dernier bloc
                     fseek(ms, (adresse_dernier_bloc-1) * sizeof(BLOC), SEEK_SET);
                     fwrite(&buffer, sizeof(BLOC), 1, ms); 
                     
@@ -569,7 +568,7 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
 				 fread(&buffer, sizeof(BLOC), 1, ms);
 				 buffer.metadata.taille_enregs--;
 				 buffer.metadata.taille_blocs--;
-				 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+				fseek(ms, (adresse_premier-1)*sizeof(BLOC), SEEK_SET);
 				 fwrite(&buffer, sizeof(BLOC), 1, ms);  
 				 
 				}else{//le fichier ne contient qu'un seul bloc et un seul enregistrement (il ne sera pas supprimé mais devien vide)
@@ -581,14 +580,14 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
 				}
 				}
                 //cas ou aucun bloc n'a etait suprimmé 
-                 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+                 fseek(ms, -(long)(sizeof(BLOC)), SEEK_CUR);
 				 fwrite(&buffer, sizeof(BLOC), 1, ms); //mettre à jour les information du dernier bloc
 				 
 				 //mettre à jour les metadonnés dans le premier bloc 
 				 fseek(ms, (adresse_premier-1)*sizeof(BLOC), SEEK_SET);
 				 fread(&buffer, sizeof(BLOC), 1, ms);
 				 buffer.metadata.taille_enregs--;
-				 fseek(ms, -1*sizeof(BLOC), SEEK_CUR);
+				 fseek(ms, -(long)(sizeof(BLOC)), SEEK_CUR);
 				 fwrite(&buffer, sizeof(BLOC), 1, ms);  
 				printf("L enregistrement avec ID %d a etait suprrime physiquement avec succés : \n",id);
 				 return;
@@ -597,9 +596,6 @@ void suppressionChaineeNonOrdonneePhysique(FILE *ms, const char *nom_fichier, in
        printf("Enregistrement avec ID %d introuvable dans le fichier '%s' .\n", id ,nom_fichier);
        return;
 }
-
-
-
 
 
 // Fonction pour défragmenter un fichier dans une organisation chaînée et non ordonnée
@@ -672,3 +668,4 @@ void defragmentationChaineeNonOrdonnee(FILE *ms, const char *nom_fichier) {
   	i++;
 	     
   }
+}
