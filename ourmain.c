@@ -102,7 +102,6 @@ void afficherBienvenue();
 void afficherMenu();
 
 
-
 int main() {
     FILE *ms;
     ms = fopen("memoire_secondaire.bin", "wb+");
@@ -131,19 +130,25 @@ int main() {
 
         switch (choix) {
             case 1:
-                creationEtChargementFichier(ms);
+                initialiserMemoireSecondaire(ms);
                 break;
             case 2:
-              afficherMetadonnees(ms);
+                afficherEtatMemoireSecondaire(ms);
                 break;
             case 3:
+                creationEtChargementFichier(ms);
+                break;
+            case 4:
+                afficherMetadonnees(ms);
+                break;
+            case 5:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
                 printf("Entrez l'ID de l'enregistrement: ");
                 scanf("%d", &id);
                 gererRecherche(ms, &meta, nom_fichier, id);
                 break;
-            case 4:
+            case 6:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
                 printf("Entrez l'ID du nouvel enregistrement: ");
@@ -152,7 +157,7 @@ int main() {
                 scanf("%s", nouvel_enreg.nom);
                 gererInsertion(ms, &meta, nom_fichier);
                 break;
-            case 5:
+            case 7:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
                 printf("Entrez l'ID de l'enregistrement à supprimer: ");
@@ -161,7 +166,7 @@ int main() {
                 scanf("%d", &type_suppression);
                 gererSuppression(ms, nom_fichier, id, type_suppression, meta.org_globale, meta.org_interne);
                 break;
-            case 6:
+            case 8:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
                 printf("Entrez l'organisation globale : ");
@@ -172,12 +177,12 @@ int main() {
                 scanf("%s", org_interne);
                 gererDefragmentation(ms, nom_fichier, org_globale, org_interne);
                 break;
-            case 7:
+            case 9:
                 printf("Entrez le nom du fichier: ");
                 scanf("%s", nom_fichier);
                 supprimerFichier(ms, nom_fichier);
                 break;
-            case 8:
+            case 10:
                 printf("Entrez le nom du fichier à renommer: ");
                 scanf("%s", nom_fichier);
                 printf("Entrez le nouveau nom: ");
@@ -185,13 +190,13 @@ int main() {
                 scanf("%s", nouveau_nom);
                 renommerFichier(ms, nom_fichier, nouveau_nom);
                 break;
-            case 9:
+            case 11:
                 compactageMemoire(ms);
                 break;
-            case 10:
+            case 12:
                 viderMemoireSecondaire(ms);
                 break;
-            case 11:
+            case 13:
                 printf("+------------------------------------------------------------+\n");
                 printf("|          Merci d'avoir utilisé le SGF. Au revoir !         |\n");
                 printf("+------------------------------------------------------------+\n");
@@ -199,11 +204,32 @@ int main() {
             default:
                 printf("Option non valide. Veuillez réessayer.\n");
         }
-    } while (choix != 11);
+    } while (choix != 13);
 
     fclose(ms);
     return 0;
 }
+
+void afficherMenu() {
+    printf("\n+------------------------------------------------------------+\n");
+    printf("|                           MENU                              |\n");
+    printf("+------------------------------------------------------------+\n");
+    printf("|   1. Initialiser la mémoire secondaire                      |\n");
+    printf("|   2. Afficher l'état de la mémoire secondaire               |\n");
+    printf("|   3. Créer et charger un fichier                            |\n");
+    printf("|   4. Afficher les métadonnées des fichiers                  |\n");
+    printf("|   5. Rechercher un enregistrement par ID                    |\n");
+    printf("|   6. Insérer un nouvel enregistrement                       |\n");
+    printf("|   7. Supprimer un enregistrement                            |\n");
+    printf("|   8. Défragmenter un fichier                                |\n");
+    printf("|   9. Supprimer un fichier                                   |\n");
+    printf("|  10. Renommer un fichier                                    |\n");
+    printf("|  11. Compactage de la mémoire secondaire                    |\n");
+    printf("|  12. Vider la mémoire secondaire                            |\n");
+    printf("|  13. Quitter                                                |\n");
+    printf("+------------------------------------------------------------+\n");
+}
+
 
 
 
@@ -266,24 +292,7 @@ void afficherEtatTableAllocation(FILE* ms) {
                (buffer.enregs[i].id == 0) ? "Libre" : "Occupé");
     }
 }
-void afficherMenu() {
-    printf("\n+------------------------------------------------------------+\n");
-    printf("|                           MENU                              |\n");
-   printf("\n+------------------------------------------------------------+\n");
-  
-    printf("|   1. Créer et charger un fichier                            |\n");
-    printf("|   2. Afficher les métadonnées des fichiers                  |\n");
-    printf("|   3. Rechercher un enregistrement par ID                    |\n");
-    printf("|   4. Insérer un nouvel enregistrement                       |\n");
-    printf("|   5. Supprimer un enregistrement                            |\n");
-    printf("|   6. Défragmenter un fichier                                |\n");
-    printf("|   7. Supprimer un fichier                                   |\n");
-    printf("|   8. Renommer un fichier                                    |\n");
-    printf("|   9. Compactage de la mémoire secondaire                    |\n");
-    printf("|   10. Vider la mémoire secondaire                           |\n");
-    printf("|   11. Quitter                                               |\n");
-    printf("+------------------------------------------------------------+\n");
-}
+
 void afficherBienvenue() {
     printf("+------------------------------------------------------------+\n");
     printf("|                                                            |\n");
@@ -1877,7 +1886,7 @@ void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouve
 
 
 
-void suppressionContigueNonOrdonneeLogique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
+void suppressionContigueNonOrdonneeLogique(FILE *ms, const char *nom_fichier, int id) {
     // Vérifier si le pointeur du fichier est NULL
     if (ms == NULL) {
         printf("Erreur : Le fichier de stockage est invalide.\n");
@@ -1918,8 +1927,7 @@ void suppressionContigueNonOrdonneeLogique(FILE *ms, METADATA *meta, const char 
     // Afficher un message de confirmation de la suppression logique
     printf("Enregistrement avec ID %d marqué comme supprimé dans le fichier '%s'.\n", id, nom_fichier);
 }
-
-void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char *nom_fichier, int id) {
+void suppressionContigueNonOrdonneePhysique(FILE *ms, const char *nom_fichier, int id) {
     // Vérifier si le pointeur du fichier est NULL
     if (ms == NULL) {
         printf("Erreur : Le fichier de stockage est invalide.\n");
@@ -1927,7 +1935,7 @@ void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char
     }
 
     // Appeler la fonction de recherche pour trouver la position de l'enregistrement
-    POSITION pos = gererRecherche(ms, meta, nom_fichier, id);
+    POSITION pos = rechercherContigueNonOrdonnee(ms, nom_fichier, id);
 
     // Vérifier si l'enregistrement a été trouvé
     if (pos.bloc == -1) {
@@ -1972,9 +1980,6 @@ void suppressionContigueNonOrdonneePhysique(FILE *ms, METADATA *meta, const char
         memset(&buffer.metadata, 0, sizeof(METADATA));
         strcpy(buffer.metadata.fichier_nom, " ");
     }
-
-    // Mettre à jour les métadonnées du fichier
-    meta->taille_enregs--;
 
     // Revenir en arrière pour réécrire le bloc avec les modifications
     fseek(ms, pos.bloc * sizeof(BLOC), SEEK_SET);
