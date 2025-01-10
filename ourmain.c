@@ -8,7 +8,7 @@
 #define WINDOW_LARGEUR 500
 #define WINDOW_HAUTEUR 500
 #define largeur 100
-#define hauteur 120
+#define hauteur 120 
 
 #define MAX_BLOCS 15
 #define FACTEUR_BLOCS MAX_BLOCS  // Facteur de blocage égal au nombre de blocs
