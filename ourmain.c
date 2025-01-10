@@ -2275,23 +2275,6 @@ void afficherMetadonnees(FILE *ms) {
     printf("+------------------------------------------------------------+\n");
 }
 
-//fonction pour trouver l'adresse du dernier bloc
-int trouveradressedernierbloc(FILE *ms, int adresse_premier_bloc,int taille_fichier ){
-	
-	fseek(ms, (adresse_premier_bloc-1) * sizeof(BLOC), SEEK_SET);
-    BLOC buffer;
-	int j=adresse_premier_bloc;
-    int i = 0, k = -1;
-    while (i < taille_fichier && j != -1) { //verifier pour ne pas dÃ©passer taille du fichier en blocs
-        fseek(ms, (j-1) * sizeof(BLOC), SEEK_SET);
-		fread(&buffer, sizeof(BLOC), 1, ms);
-		k=j;
-		j = buffer.suivant;
-		i++;
-	}
-	return k;
-}
-
 
 
 void chargerContiguNonOrdonne(FILE *ms, METADATA *metadata) {
