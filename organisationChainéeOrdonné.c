@@ -699,102 +699,11 @@ void defragmentationChaineeOrdonnee(FILE *ms, const char *nom_fichier) {
     	}
     }
     // Si le fichier non  trouvé
-    if(taille_blocs == 0){
+    if(fichierTrouve == 0){
        printf("Fichier '%s' non trouvé.\n", nom_fichier);
 	}else{
         printf("Défragmentation terminée avec succès.\n");
     }
 }
 
-// Compactage d'un fichier chaîné et ordonné
-void compactageChaineeOrdonnee(FILE *ms, const char *nom_fichier) {
-    printf("Compactage du fichier '%s' dans une organisation Chaînée et ORDONNE.\n", nom_fichier);
-    // Réorganiser les blocs chaînés en récupérant l'espace inutilisé
-    // Implémentation spécifique ici pour compactage chaîné ordonné
-}
-
-
-
-int main() {
-    FILE *ms = fopen("memoire_secondaire.dat", "wb+");
-    if (ms == NULL) {
-        printf("Erreur : Impossible de créer le fichier 'memoire_secondaire.dat'.\n");
-        return 1;
-    }
-    METADATA metadata;
-    initialiserMemoireSecondaire( ms);
-
-    // Charger les blocs contigus non ordonnés
-    printf("nom du fichier\n");
-    scanf(" %s",metadata.fichier_nom);
-    printf("nombre d'enregistrement\n");
-    scanf("%d",&metadata.taille_enregs);
-    printf("taille-blocs\n");
-    scanf("%d",&metadata.taille_blocs);
-    printf("Metadata details: file name = %s, enregs = %d, blocs = %d\n", metadata.fichier_nom, metadata.taille_enregs, metadata.taille_blocs);
     
-    chargerChaineeOrdonne(ms, metadata);
-
-    int choix;
-    do {
-        printf("\n--- MENU PRINCIPAL ---\n");
-        printf("1. Insérer un enregistrement\n");
-        printf("2. Rechercher un enregistrement\n");
-        printf("3. Supprimer logiquement un enregistrement\n");
-        printf("4. Supprimer physiquement un enregistrement\n");
-        printf("5. Quitter\n");
-        printf("Entrez votre choix : ");
-        fflush(stdout); // Assurez-vous que le tampon de sortie est vidé
-        if (scanf("%d", &choix) != 1) {
-            while (getchar() != '\n'); // Vider le tampon d'entrée
-            continue; // Si l'entrée est invalide, redemander le choix
-        }
-
-        switch (choix) {
-            case 1: {
-                ENREG nouvel_enreg;
-                printf("Entrez l'ID du nouvel enregistrement :\n ");
-                scanf("%d", &nouvel_enreg.id);
-                printf("Entrez le nom du nouvel enregistrement : \n");
-                scanf("%s", nouvel_enreg.nom);
-                insertionChaineeOrdonnee(ms, metadata.fichier_nom, nouvel_enreg);
-                break;
-            }
-            case 2: {
-                int id_recherche;
-                printf("Entrez l'ID de l'enregistrement à rechercher : \n");
-                scanf("%d", &id_recherche);
-                POSITION pos = rechercherChaineeOrdonnee(ms, metadata.fichier_nom, id_recherche);
-                if (pos.bloc > -1 && pos.deplacement > -1) {
-                    printf("Enregistrement trouvé au bloc %d, position %d.\n", pos.bloc, pos.deplacement);
-                } else {
-                    printf("Enregistrement non trouvé.\n");
-                }
-                break;
-            }
-            case 3: {
-                int id_suppression_logique;
-                printf("Entrez l'ID de l'enregistrement à supprimer logiquement : \n");
-                scanf("%d", &id_suppression_logique);
-                suppressionChaineeOrdonneeLogique(ms,metadata.fichier_nom, id_suppression_logique);
-                break;
-            }
-            case 4: {
-                int id_suppression_physique;
-                printf("Entrez l'ID de l'enregistrement à supprimer physiquement :\n ");
-                scanf("%d", &id_suppression_physique);
-                suppressionChaineeOrdonneePhysique(ms, metadata.fichier_nom, id_suppression_physique);
-                break;
-            }
-            case 5:
-                printf("Au revoir !\n");
-                break;
-            default:
-                printf("Choix invalide, veuillez réessayer.\n");
-                break;
-        }
-    } while (choix != 5);
-
-    fclose(ms);
-    return 0; 
-}
