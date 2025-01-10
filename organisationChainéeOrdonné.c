@@ -39,49 +39,6 @@ struct BLOC {
 };
 
 
-
-void initialiserMemoireSecondaire(FILE* ms) {
-    BLOC buffer;
-    if (ms == NULL) {
-        perror("Erreur : Impossible d'ouvrir 'memoiresecondaire.dat'.\n");
-        return;
-    }
-
-    printf("Initialisation de la mémoire secondaire...\n");
-    memset(&buffer, 0, sizeof(BLOC));  // Initialiser le buffer à zéro
-
-    // Initialiser la table d'allocation dans le bloc 0
-    buffer.enregs[0].id = 1; // Marquer le premier bloc comme occupé (table d'allocation)
-    sprintf(buffer.enregs[0].nom, "Bloc%d", 0);
-
-    for (int i = 1; i < FACTEUR_BLOCS; i++) {
-        buffer.enregs[i].id = 0; // Marquer les blocs comme libres
-        memset(buffer.enregs[i].nom, ' ', sizeof(buffer.enregs[i].nom) - 1); // Initialiser à des espaces
-        buffer.enregs[i].nom[sizeof(buffer.enregs[i].nom) - 1] = '\0'; // Terminer la chaîne avec un NULL
-    }
-
-    // Initialiser les métadonnées avec des espaces pour le nom du fichier
-    memset(buffer.metadata.fichier_nom, ' ', sizeof(buffer.metadata.fichier_nom) - 1);
-    buffer.metadata.fichier_nom[sizeof(buffer.metadata.fichier_nom) - 1] = '\0'; // Terminer la chaîne avec un NULL
-
-    buffer.metadata.taille_blocs = 1;  // Indiquer que ce bloc contient la table d'allocation
-    buffer.metadata.taille_enregs = 0;
-    buffer.metadata.adresse_premier = 0;
-    strcpy(buffer.metadata.org_globale, "N/A");
-    strcpy(buffer.metadata.org_interne, "N/A");
-
-    buffer.enregs_utilises = FACTEUR_BLOCS;
-    buffer.suivant = -1;  // Pas de bloc suivant
-
-    // Écrire le buffer dans le fichier
-    rewind(ms);  // S'assurer de commencer à écrire au début
-    if (fwrite(&buffer, sizeof(buffer), 1, ms) != 1) {
-        printf("Erreur : Impossible d'écrire dans 'memoiresecondaire.dat'.\n");
-    } else {
-        printf("Mémoire secondaire initialisée avec succès.\n");
-    }
-}
-
  //Fonction pour chercher le premier bloc libre dans la table d'allocation et le marquer comme occupé
 int chercherBlocLibre(int *tablleAllocation ){
 	int k=1;
