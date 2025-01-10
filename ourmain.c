@@ -51,7 +51,7 @@ void chargerChaineOrdonne(FILE *ms, METADATA *metadata);
 void chargerChaineNonOrdonne(FILE *ms, METADATA *metadata);
 void mettreAJourMetadonnees(FILE *ms, const METADATA *metadata, int blocIndex);
 void lireTableAllocation(FILE *ms, BLOC *buffer);
-
+void initialiserBloc(BLOC *bloc);
 void lireTableAllocation(FILE *ms, BLOC *buffer);
 void insertionContigueOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
 void insertionContigueNonOrdonnee(FILE *ms, const char *nom_fichier, ENREG nouvel_enreg);
@@ -1477,7 +1477,29 @@ void renommerFichier(FILE *ms, const char *ancien_nom, const char *nouveau_nom) 
     }
 }
 
-// Fonction pour supprimer un fichier
+void initialiserBloc(BLOC *bloc) {
+    memset(bloc, 0, sizeof(BLOC));  // Initialiser le bloc à zéro
+
+    // Initialiser les métadonnées avec des espaces pour le nom du fichier
+    memset(bloc->metadata.fichier_nom, ' ', sizeof(bloc->metadata.fichier_nom) - 1);
+    bloc->metadata.fichier_nom[sizeof(bloc->metadata.fichier_nom) - 1] = '\0'; // Terminer la chaîne avec un NULL
+
+    bloc->metadata.taille_blocs = 0;  // Réinitialiser la taille des blocs
+    bloc->metadata.taille_enregs = 0;
+    bloc->metadata.adresse_premier = -1;
+    strcpy(bloc->metadata.org_globale, "N/A");
+    strcpy(bloc->metadata.org_interne, "N/A");
+
+    for (int i = 0; i < FACTEUR_BLOCS; i++) {
+        bloc->enregs[i].id = 0; // Marquer les enregistrements comme libres
+        memset(bloc->enregs[i].nom, ' ', sizeof(bloc->enregs[i].nom) - 1); // Initialiser à des espaces
+        bloc->enregs[i].nom[sizeof(bloc->enregs[i].nom) - 1] = '\0'; // Terminer la chaîne avec un NULL
+    }
+
+    bloc->enregs_utilises = 0;  // Réinitialiser les enregistrements utilisés
+    bloc->suivant = -1;  // Pas de bloc suivant
+}
+
 void supprimerFichier(FILE *ms, const char *nom_du_fichier) {
     BLOC buffer;
     bool fichier_trouve = false;
@@ -1496,20 +1518,21 @@ void supprimerFichier(FILE *ms, const char *nom_du_fichier) {
 
     // Étape 2: Si le fichier n'a pas été trouvé
     if (!fichier_trouve) {
-        printf("Erreur : fichier '%s' non trouvé.\n", nom_du_fichier); // Affichage de l'erreur
+        printf("Erreur : fichier '%s' non trouvé.\n", nom_du_fichier);
         return;
     }
 
-    // Étape 3: Suppression physique du fichier (vidage des blocs)
+    // Étape 3: Suppression physique du fichier (vidage des blocs et réinitialisation des métadonnées)
     fseek(ms, adresse_premier_bloc * sizeof(BLOC), SEEK_SET); // Se positionner sur le premier bloc du fichier
     for (int i = 0; i < taille_fichier; i++) {
-        memset(&buffer, 0, sizeof(BLOC)); // Vider le contenu du bloc
-        fwrite(&buffer, sizeof(BLOC), 1, ms); // Écriture du bloc vide pour supprimer
+        initialiserBloc(&buffer); // Réinitialiser le bloc
+        fwrite(&buffer, sizeof(BLOC), 1, ms); // Écriture du bloc réinitialisé
     }
 
     // Étape 4: Affichage du succès
     printf("Fichier '%s' supprimé avec succès.\n", nom_du_fichier);
 }
+
 //fonction pour trouver l'adresse du dernier bloc
 int trouveradressedernierbloc(FILE *ms, int adresse_premier_bloc,int taille_fichier ){
 	
@@ -2114,4 +2137,3 @@ void defragmentationContigueNonOrdonnee(FILE *ms, const char *nom_fichier) {
 
     printf("Défragmentation terminée pour le fichier '%s'.\n", nom_fichier);
 }
-
